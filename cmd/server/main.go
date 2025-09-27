@@ -1,15 +1,20 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"log"
+	"scam-detection-backend/internal/config"
+	"scam-detection-backend/internal/models"
 )
 
 func main() {
-	r := gin.Default()
+	cfg := config.Load()
 
-	r.GET("/", func(c *gin.Context) {
-		c.String(200, "Hello, World!")
-	})
+	db, err := config.Connect(&cfg.Database)
+	if err != nil {
+		log.Fatal("Не удалось подключиться к БД:", err)
+	}
 
-	r.Run(":8080")
+	if err := db.AutoMigrate(&models.User{}, &models.Check{}); err != nil {
+		log.Fatal("Ошибка миграций:", err)
+	}
 }
