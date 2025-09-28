@@ -8,6 +8,7 @@ type UserRepository interface {
 	GetByUsernameOrEmail(login string) (*models.User, error)
 	Update(id uint, data *models.UpdateUserRequest) error
 	Delete(id uint) error
-	ExistsByUsername(username string) (bool, error)
-	ExistsByEmail(email string) (bool, error)
+}
+
+type CheckRepository interface {
 }

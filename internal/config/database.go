@@ -10,7 +10,9 @@ import (
 func Connect(d *DatabaseConfig) (*gorm.DB, error) {
 	dsn := d.DSN()
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		TranslateError: true,
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("не удалось подключиться к БД: %w", err)
