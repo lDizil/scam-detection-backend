@@ -1,6 +1,10 @@
 package repository
 
-import "scam-detection-backend/internal/models"
+import (
+	"context"
+	"scam-detection-backend/internal/models"
+	"time"
+)
 
 type UserRepository interface {
 	CreateUser(user *models.User) error
@@ -11,4 +15,12 @@ type UserRepository interface {
 }
 
 type CheckRepository interface {
+}
+
+type SessionRepository interface {
+	Create(ctx context.Context, s *models.UserSessions) error
+	GetActiveByHash(ctx context.Context, hash string, now time.Time) (*models.UserSessions, error)
+	MarkUsed(ctx context.Context, id uint, usedAt time.Time) error
+	InvalidateAllByUser(ctx context.Context, userID uint) error
+	DeleteExpired(ctx context.Context, now time.Time) (int64, error)
 }

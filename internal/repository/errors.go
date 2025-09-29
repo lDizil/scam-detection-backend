@@ -10,3 +10,8 @@ var (
 	ErrInvalidData       = fmt.Errorf("некорректные данные")
 	ErrDatabaseError     = fmt.Errorf("ошибка базы данных")
 )
+
+var (
+	ErrSessionNotFound = fmt.Errorf("сессия не найдена")
+	ErrAlreadyUsed     = fmt.Errorf("refresh уже использован")
+)
