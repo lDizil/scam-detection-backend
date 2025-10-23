@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"scam-detection-backend/internal/models"
 
 	"gorm.io/gorm"
@@ -17,16 +18,16 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (r *userRepository) CreateUser(user *models.User) error {
 	if user == nil {
-		return ErrInvalidData
+		return gorm.ErrInvalidData
 	}
 
 	err := r.db.Create(user).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return ErrUserAlreadyExists
+			return gorm.ErrDuplicatedKey
 		}
-		return ErrDatabaseError
+		return fmt.Errorf("failed to create user: %w", err)
 	}
 
 	return nil
@@ -39,9 +40,9 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrUserNotFound
+			return nil, gorm.ErrRecordNotFound
 		}
-		return nil, ErrDatabaseError
+		return nil, fmt.Errorf("failed to get user by id: %w", err)
 	}
 
 	return &user, nil
@@ -54,9 +55,9 @@ func (r *userRepository) GetByUsernameOrEmail(login string) (*models.User, error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrUserNotFound
+			return nil, gorm.ErrRecordNotFound
 		}
-		return nil, ErrDatabaseError
+		return nil, fmt.Errorf("failed to get user by username or email: %w", err)
 	}
 
 	return &user, nil
@@ -73,17 +74,17 @@ func (r *userRepository) Update(id uint, data *models.UpdateUserRequest) error {
 	}
 
 	if len(updates) == 0 {
-		return ErrInvalidData
+		return gorm.ErrInvalidData
 	}
 
 	result := r.db.Model(&models.User{}).Where("id = ?", id).Updates(updates)
 
 	if result.Error != nil {
-		return ErrDatabaseError
+		return fmt.Errorf("faile to update user: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return ErrUserNotFound
+		return gorm.ErrRecordNotFound
 	}
 
 	return nil
@@ -93,11 +94,11 @@ func (r *userRepository) Delete(id uint) error {
 	result := r.db.Delete(&models.User{}, id)
 
 	if result.Error != nil {
-		return ErrDatabaseError
+		return fmt.Errorf("faile to delete user: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return ErrUserNotFound
+		return gorm.ErrRecordNotFound
 	}
 	return nil
 }
