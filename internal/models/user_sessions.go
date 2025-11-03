@@ -12,3 +12,10 @@ type UserSessions struct {
 	UsedAt    *time.Time
 	CreatedAt time.Time
 }
+
+type TokenPair struct {
+	AccessToken  string
+	RefreshToken string
+	AccessExpiry time.Time
+	RefreshExpry time.Time
+}
