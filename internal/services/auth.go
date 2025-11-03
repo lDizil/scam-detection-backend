@@ -63,7 +63,7 @@ func (s *AuthService) Register(ctx context.Context, req *models.CreateUserReques
 }
 
 func (s *AuthService) Login(ctx context.Context, username, password string) (*models.User, *models.TokenPair, error) {
-	user, err := s.userRepo.GetByUsername(username)
+	user, err := s.userRepo.GetByUsernameOrEmail(username)
 	if err != nil {
 		return nil, nil, ErrInvalidCredentials
 	}
