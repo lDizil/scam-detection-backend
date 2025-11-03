@@ -7,8 +7,11 @@ import (
 )
 
 type UserRepository interface {
+	Create(user *models.User) error
 	CreateUser(user *models.User) error
 	GetByID(id uint) (*models.User, error)
+	GetByUsername(username string) (*models.User, error)
+	GetByEmail(email string) (*models.User, error)
 	GetByUsernameOrEmail(login string) (*models.User, error)
 	Update(id uint, data *models.UpdateUserRequest) error
 	Delete(id uint) error

@@ -6,9 +6,12 @@ import (
 )
 
 type UserService interface {
+	GetByID(id uint) (*models.User, error)
+	Update(id uint, data *models.UpdateUserRequest) error
+	Delete(id uint) error
 }
 
-type SessinService interface {
+type SessionService interface {
 	GenerateSession(ctx context.Context, userID uint) (*models.TokenPair, error)
 	ValidateAccessToken(token string) (userId uint, err error)
 	RefreshSession(ctx context.Context, refreshToken string) (*models.TokenPair, error)

@@ -10,6 +10,13 @@ import (
 type Config struct {
 	Database DatabaseConfig
 	Server   ServerConfig
+	JWT      JWTConfig
+}
+
+type JWTConfig struct {
+	Secret               string
+	AccessTokenDuration  string
+	RefreshTokenDuration string
 }
 
 type DatabaseConfig struct {
@@ -44,6 +51,10 @@ func Load() *Config {
 	serverPort := getEnv("SERVER_PORT", "8080")
 	serverMode := getEnv("SERVER_MODE", "debug")
 
+	jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-in-production")
+	accessDuration := getEnv("JWT_ACCESS_DURATION", "15m")
+	refreshDuration := getEnv("JWT_REFRESH_DURATION", "7d")
+
 	config := &Config{
 		Database: DatabaseConfig{
 			Host:     host,
@@ -55,6 +66,11 @@ func Load() *Config {
 		Server: ServerConfig{
 			Port: serverPort,
 			Mode: serverMode,
+		},
+		JWT: JWTConfig{
+			Secret:               jwtSecret,
+			AccessTokenDuration:  accessDuration,
+			RefreshTokenDuration: refreshDuration,
 		},
 	}
 

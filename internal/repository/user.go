@@ -33,6 +33,10 @@ func (r *userRepository) CreateUser(user *models.User) error {
 	return nil
 }
 
+func (r *userRepository) Create(user *models.User) error {
+	return r.CreateUser(user)
+}
+
 func (r *userRepository) GetByID(id uint) (*models.User, error) {
 	var user models.User
 
@@ -45,6 +49,30 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
 	}
 
+	return &user, nil
+}
+
+func (r *userRepository) GetByUsername(username string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, fmt.Errorf("failed to get user by username: %w", err)
+	}
+	return &user, nil
+}
+
+func (r *userRepository) GetByEmail(email string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("email = ?", email).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, fmt.Errorf("failed to get user by email: %w", err)
+	}
 	return &user, nil
 }
 

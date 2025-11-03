@@ -17,17 +17,17 @@ type User struct {
 }
 
 type CreateUserRequest struct {
-	Username string  `json:"username" binding:"required, min=3"`
-	Email    *string `json:"email" binding:"omitempty, email"`
-	Password string  `json:"password" binding:"required, min=6"`
+	Username string  `json:"username" binding:"required,min=3"`
+	Email    *string `json:"email" binding:"omitempty,email"`
+	Password string  `json:"password" binding:"required,min=6"`
 }
 
 type UpdateUserRequest struct {
-	Username *string `json:"username,omitempty" binding:"omitempty, min=3"`
-	Email    *string `json:"email,omitempty" binding:"omitempty, email"`
+	Username *string `json:"username,omitempty" binding:"omitempty,min=3"`
+	Email    *string `json:"email,omitempty" binding:"omitempty,email"`
 }
 
 type UpdatePasswordRequest struct {
 	CurrentPassword string `json:"cur_password" binding:"required"`
-	NewPassword     string `json:"new_password" binding:"required, min=6"`
+	NewPassword     string `json:"new_password" binding:"required,min=6"`
 }
