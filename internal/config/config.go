@@ -52,8 +52,8 @@ func Load() *Config {
 	serverMode := getEnv("SERVER_MODE", "debug")
 
 	jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-in-production")
-	accessDuration := getEnv("JWT_ACCESS_DURATION", "15m")
-	refreshDuration := getEnv("JWT_REFRESH_DURATION", "7d")
+	accessDuration := getEnv("JWT_ACCESS_DURATION", "60m")
+	refreshDuration := getEnv("JWT_REFRESH_DURATION", "168h")
 
 	config := &Config{
 		Database: DatabaseConfig{
