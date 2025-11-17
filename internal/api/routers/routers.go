@@ -11,6 +11,7 @@ import (
 func SetupRoutes(r *gin.Engine, authService *services.AuthService, userService services.UserService) {
 	authHandler := handlers.NewAuthHandler(authService, userService)
 	userHandler := handlers.NewUserHandler(userService)
+	analysisHandler := handlers.NewAnalysisHandler()
 
 	api := r.Group("/api/v1")
 	{
@@ -20,6 +21,15 @@ func SetupRoutes(r *gin.Engine, authService *services.AuthService, userService s
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/logout", authHandler.Logout)
 			auth.POST("/refresh", authHandler.RefreshToken)
+		}
+
+		// ML Analysis endpoints (защищенные)
+		analysis := api.Group("/analysis")
+		analysis.Use(middleware.AuthMiddleware(authService))
+		{
+			analysis.POST("/text", analysisHandler.AnalyzeText)
+			analysis.POST("/batch", analysisHandler.AnalyzeBatch)
+			analysis.GET("/health", analysisHandler.MLHealthCheck)
 		}
 
 		protected := api.Group("")
