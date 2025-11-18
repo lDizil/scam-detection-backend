@@ -24,8 +24,27 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      ML_SERVICE_URL: http://ml-service:8000
     depends_on:
       - postgres
+      - ml-service
+
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: scam-detection-ml
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ml_models_cache:/app/models_cache
+      - ./ml-service/training:/app/training
+    environment:
+      - MODEL_NAME=ealvaradob/bert-finetuned-phishing
+      - MODEL_CACHE_DIR=/app/models_cache
+      - PHISHING_THRESHOLD=0.5
 
 volumes:
   postgres_data:
+  ml_models_cache:

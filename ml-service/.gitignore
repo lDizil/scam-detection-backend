@@ -1,0 +1,38 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ML models cache
+models_cache/
+training/models/
+!training/models/.gitkeep
+
+# Data
+training/data/*.csv
+!training/data/example_data.csv
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
