@@ -1,5 +1,30 @@
 basePath: /api/v1
 definitions:
+  handlers.AnalyzeBatchRequest:
+    properties:
+      texts:
+        example:
+        - '["Вы выиграли приз"'
+        - ' "Привет'
+        - ' как дела?"]'
+        items:
+          type: string
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - texts
+    type: object
+  handlers.AnalyzeTextRequest:
+    properties:
+      text:
+        example: Срочно! Ваш аккаунт заблокирован
+        maxLength: 5000
+        minLength: 1
+        type: string
+    required:
+    - text
+    type: object
   handlers.AuthResponse:
     properties:
       access_token:
@@ -8,6 +33,24 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/models.User'
+    type: object
+  handlers.CheckHistoryResponse:
+    properties:
+      checks:
+        items:
+          $ref: '#/definitions/models.Check'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  handlers.ErrorResponse:
+    properties:
+      error:
+        type: string
     type: object
   handlers.LoginRequest:
     properties:
@@ -40,6 +83,46 @@ definitions:
       username:
         minLength: 3
         type: string
+    type: object
+  mlclient.BatchTextAnalysisResponse:
+    properties:
+      predictions:
+        items:
+          $ref: '#/definitions/mlclient.PredictionResult'
+        type: array
+      processing_time:
+        type: number
+      success:
+        type: boolean
+    type: object
+  mlclient.HealthResponse:
+    properties:
+      model_loaded:
+        type: boolean
+      model_name:
+        type: string
+      status:
+        type: string
+      version:
+        type: string
+    type: object
+  mlclient.PredictionResult:
+    properties:
+      confidence:
+        type: number
+      is_scam:
+        type: boolean
+      label:
+        type: string
+    type: object
+  mlclient.TextAnalysisResponse:
+    properties:
+      prediction:
+        $ref: '#/definitions/mlclient.PredictionResult'
+      processing_time:
+        type: number
+      success:
+        type: boolean
     type: object
   models.Check:
     properties:
@@ -129,6 +212,121 @@ paths:
       summary: Удалить аккаунт
       tags:
       - user
+  /analysis/batch:
+    post:
+      consumes:
+      - application/json
+      description: Отправляет несколько текстов в ML сервис для анализа
+      parameters:
+      - description: Список текстов для анализа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AnalyzeBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный анализ
+          schema:
+            $ref: '#/definitions/mlclient.BatchTextAnalysisResponse'
+        "400":
+          description: Невалидный запрос
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка ML сервиса
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Пакетный анализ текстов
+      tags:
+      - analysis
+  /analysis/health:
+    get:
+      description: Возвращает статус ML сервиса и информацию о модели
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ML сервис здоров
+          schema:
+            $ref: '#/definitions/mlclient.HealthResponse'
+        "500":
+          description: ML сервис недоступен
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Проверка здоровья ML сервиса
+      tags:
+      - analysis
+  /analysis/history:
+    get:
+      description: Возвращает список всех проверок текущего пользователя с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Количество записей на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список проверок
+          schema:
+            $ref: '#/definitions/handlers.CheckHistoryResponse'
+        "401":
+          description: Не авторизован
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка БД
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: История проверок пользователя
+      tags:
+      - analysis
+  /analysis/text:
+    post:
+      consumes:
+      - application/json
+      description: Отправляет текст в ML сервис для определения, является ли он фишинговым/мошенническим
+      parameters:
+      - description: Текст для анализа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AnalyzeTextRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный анализ
+          schema:
+            $ref: '#/definitions/mlclient.TextAnalysisResponse'
+        "400":
+          description: Невалидный запрос
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка ML сервиса
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Анализ текста на мошенничество
+      tags:
+      - analysis
   /auth/login:
     post:
       consumes:
