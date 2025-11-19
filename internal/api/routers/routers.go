@@ -38,6 +38,8 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, 
 			analysis.POST("/text", analysisHandler.AnalyzeText)
 			analysis.POST("/batch", analysisHandler.AnalyzeBatch)
 			analysis.GET("/history", analysisHandler.GetCheckHistory)
+			analysis.DELETE("/history/:id", analysisHandler.DeleteCheck)
+			analysis.GET("/stats", analysisHandler.GetStats)
 		}
 
 		protected := api.Group("")

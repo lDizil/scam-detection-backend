@@ -67,3 +67,59 @@ func (r *checkRepository) GetCheckDetails(checkID uint) ([]models.CheckDetail, e
 	}
 	return details, nil
 }
+
+func (r *checkRepository) DeleteCheck(id uint, userID uint) error {
+	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Check{}).Error
+}
+
+func (r *checkRepository) GetUserStats(userID uint) (map[string]interface{}, error) {
+	var total int64
+	var checks []models.Check
+
+	if err := r.db.Model(&models.Check{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	if err := r.db.Where("user_id = ?", userID).Find(&checks).Error; err != nil {
+		return nil, err
+	}
+
+	stats := map[string]interface{}{
+		"total_analyses":          total,
+		"safe_count":              0,
+		"suspicious_count":        0,
+		"dangerous_count":         0,
+		"average_risk_score":      0.0,
+		"average_processing_time": 0,
+	}
+
+	if total == 0 {
+		return stats, nil
+	}
+
+	var safeCount, suspiciousCount, dangerousCount int
+	var totalRisk float64
+	var totalTime int
+
+	for _, check := range checks {
+		totalRisk += check.DangerScore
+		totalTime += check.ProcessingTime
+
+		switch check.DangerLevel {
+		case "low":
+			safeCount++
+		case "medium":
+			suspiciousCount++
+		case "high", "critical":
+			dangerousCount++
+		}
+	}
+
+	stats["safe_count"] = safeCount
+	stats["suspicious_count"] = suspiciousCount
+	stats["dangerous_count"] = dangerousCount
+	stats["average_risk_score"] = totalRisk / float64(total)
+	stats["average_processing_time"] = totalTime / int(total)
+
+	return stats, nil
+}

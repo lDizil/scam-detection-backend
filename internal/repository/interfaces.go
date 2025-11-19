@@ -24,6 +24,8 @@ type CheckRepository interface {
 	UpdateCheckStatus(id uint, status string, dangerScore float64, dangerLevel string, processingTime int) error
 	AddCheckDetail(detail *models.CheckDetail) error
 	GetCheckDetails(checkID uint) ([]models.CheckDetail, error)
+	DeleteCheck(id uint, userID uint) error
+	GetUserStats(userID uint) (map[string]interface{}, error)
 }
 
 type SessionRepository interface {

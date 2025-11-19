@@ -7,6 +7,7 @@ import (
 	"scam-detection-backend/internal/mlclient"
 	"scam-detection-backend/internal/models"
 	"scam-detection-backend/internal/repository"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -89,9 +90,17 @@ func (h *AnalysisHandler) AnalyzeText(c *gin.Context) {
 		return
 	}
 
-	dangerScore := result.Prediction.Confidence
-	if !result.Prediction.IsScam {
+	var dangerScore float64
+	if result.Prediction.IsScam {
+		dangerScore = result.Prediction.Confidence
+	} else {
 		dangerScore = 1.0 - result.Prediction.Confidence
+	}
+
+	keywordScore := detectPhishingPatterns(req.Text)
+	dangerScore = dangerScore*0.7 + keywordScore*0.3
+	if dangerScore > 1.0 {
+		dangerScore = 1.0
 	}
 
 	dangerLevel := calculateDangerLevel(dangerScore)
@@ -142,6 +151,81 @@ func calculateDangerLevel(confidence float64) string {
 	return "critical"
 }
 
+func detectPhishingPatterns(text string) float64 {
+	textLower := strings.ToLower(text)
+	score := 0.0
+
+	criticalPatterns := map[string]float64{
+		"cvv":                      0.4,
+		"код из смс":               0.4,
+		"код из сообщения":         0.4,
+		"назовите пароль":          0.4,
+		"введите пароль":           0.4,
+		"данные карты":             0.35,
+		"номер карты":              0.35,
+		"срок действия карты":      0.4,
+		"служба безопасности банк": 0.3,
+		"техподдержка банк":        0.3,
+		"администратор банк":       0.3,
+	}
+
+	highRiskPatterns := map[string]float64{
+		"перейдите по ссылке": 0.25,
+		"подтвердите данные":  0.25,
+		"заблокирован":        0.2,
+		"восстановление":      0.15,
+		"отправьте код":       0.25,
+		"назовите код":        0.25,
+		"переведите":          0.2,
+		"выиграли":            0.2,
+		"приз":                0.15,
+		"срочно обновить":     0.2,
+		"аккаунт удален":      0.2,
+	}
+
+	for pattern, weight := range criticalPatterns {
+		if strings.Contains(textLower, pattern) {
+			score += weight
+		}
+	}
+
+	for pattern, weight := range highRiskPatterns {
+		if strings.Contains(textLower, pattern) {
+			score += weight
+		}
+	}
+
+	if score > 1.0 {
+		score = 1.0
+	}
+
+	return score
+}
+
+func detectPhishingKeywords(text string) float64 {
+	text = strings.ToLower(text)
+
+	highRiskKeywords := []string{
+		"заблокирован", "срочно", "перейдите по ссылке", "введите данные",
+		"cvv", "код из смс", "подтвердите", "восстановление", "служба безопасности",
+		"ваша карта", "аккаунт удален", "выиграли", "миллион", "приз",
+		"переведите деньги", "назовите пароль", "техподдержка", "отправьте код",
+	}
+
+	score := 0.0
+	for _, keyword := range highRiskKeywords {
+		if strings.Contains(text, keyword) {
+			score += 0.15
+		}
+	}
+
+	if score > 1.0 {
+		score = 1.0
+	}
+
+	return score
+}
+
 // AnalyzeBatch godoc
 // @Summary      Пакетный анализ текстов
 // @Description  Отправляет несколько текстов в ML сервис для анализа
@@ -189,9 +273,17 @@ func (h *AnalysisHandler) AnalyzeBatch(c *gin.Context) {
 			title = string([]rune(text)[:50])
 		}
 
-		dangerScore := pred.Confidence
-		if !pred.IsScam {
+		var dangerScore float64
+		if pred.IsScam {
+			dangerScore = pred.Confidence
+		} else {
 			dangerScore = 1.0 - pred.Confidence
+		}
+
+		keywordScore := detectPhishingPatterns(text)
+		dangerScore = dangerScore*0.7 + keywordScore*0.3
+		if dangerScore > 1.0 {
+			dangerScore = 1.0
 		}
 
 		check := &models.Check{
@@ -317,4 +409,63 @@ func stringToInt(s string) (int, error) {
 		result = result*10 + int(ch-'0')
 	}
 	return result, nil
+}
+
+// DeleteCheck godoc
+// @Summary      Удалить проверку
+// @Description  Удаляет проверку из истории пользователя
+// @Tags         analysis
+// @Param        id path int true "ID проверки"
+// @Success      200 {object} map[string]string "Успешно удалено"
+// @Failure      401 {object} ErrorResponse "Не авторизован"
+// @Failure      403 {object} ErrorResponse "Нет доступа"
+// @Failure      500 {object} ErrorResponse "Ошибка БД"
+// @Security     BearerAuth
+// @Router       /analysis/history/{id} [delete]
+func (h *AnalysisHandler) DeleteCheck(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := stringToInt(idStr)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid check id"})
+		return
+	}
+
+	if err := h.checkRepo.DeleteCheck(uint(id), userID); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to delete check: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Check deleted successfully"})
+}
+
+// GetStats godoc
+// @Summary      Статистика пользователя
+// @Description  Возвращает агрегированную статистику по проверкам пользователя
+// @Tags         analysis
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "Статистика"
+// @Failure      401 {object} ErrorResponse "Не авторизован"
+// @Failure      500 {object} ErrorResponse "Ошибка БД"
+// @Security     BearerAuth
+// @Router       /analysis/stats [get]
+func (h *AnalysisHandler) GetStats(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	stats, err := h.checkRepo.GetUserStats(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to get stats: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

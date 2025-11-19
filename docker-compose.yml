@@ -20,8 +20,10 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       GUNICORN_ACCESS_LOGFILE: '/dev/null'
+      GUNICORN_ERROR_LOGFILE: '/dev/null'
       PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 50
       PGADMIN_CONFIG_FILE_LOG_LEVEL: 50
+      PGADMIN_DISABLE_POSTFIX: 'true'
     ports:
       - "5050:80"
     volumes:
@@ -29,7 +31,10 @@ services:
     depends_on:
       - postgres
     logging:
-      driver: "none"
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 
   backend:
     build:
@@ -60,9 +65,9 @@ services:
       - ml_models_cache:/app/models_cache
       - ./ml-service/training:/app/training
     environment:
-      - MODEL_NAME=RUSpam/spam_deberta_v4
+      - CUSTOM_MODEL_PATH=/app/training/finetuned_model
       - MODEL_CACHE_DIR=/app/models_cache
-      - PHISHING_THRESHOLD=0.95
+      - PHISHING_THRESHOLD=0.5
 
 volumes:
   postgres_data:
