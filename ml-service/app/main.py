@@ -1,7 +1,3 @@
-"""
-Главный файл FastAPI приложения
-"""
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -11,7 +7,6 @@ from app.core.config import settings
 from app.api.endpoints import router
 from app.services.model_service import model_service
 
-# Настройка логирования
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -20,21 +15,19 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Управление жизненным циклом приложения"""
-    logger.info("🚀 Запуск ML сервиса...")
+    logger.info("Запуск ML сервиса...")
     try:
         await model_service.load_model()
-        logger.info("✅ ML сервис готов к работе!")
+        logger.info("ML сервис готов к работе")
     except Exception as e:
-        logger.error(f"❌ Ошибка при загрузке модели: {e}")
+        logger.error(f" Ошибка при загрузке модели: {e}")
         raise
 
     yield
 
-    logger.info("🛑 Остановка ML сервиса...")
+    logger.info("Остановка ML сервиса...")
 
 
-# Создаем FastAPI приложение
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -47,11 +40,11 @@ app = FastAPI(
     - **Задача**: Бинарная классификация (phishing vs legitimate)
     
     ### Что детектирует:
-    ✅ Фишинговые сообщения от поддельных банков и сервисов  
-    ✅ Срочные запросы личных данных (пароли, карты, коды)  
-    ✅ Подозрительные ссылки и призывы к действию  
-    ✅ Манипуляции через страх или жадность  
-    ✅ Запросы на перевод денег под различными предлогами  
+     Фишинговые сообщения от поддельных банков и сервисов  
+     Срочные запросы личных данных (пароли, карты, коды)  
+     Подозрительные ссылки и призывы к действию  
+     Манипуляции через страх или жадность  
+     Запросы на перевод денег под различными предлогами  
     
     ### Endpoints:
     - `GET /health` - Проверка статуса сервиса
@@ -87,4 +80,14 @@ async def root():
         "status": "running",
         "model_loaded": model_service.model_loaded,
         "docs": "/docs",
+    }
+
+
+@app.get("/health", tags=["Health"])
+async def health():
+    return {
+        "status": "healthy" if model_service.model_loaded else "unhealthy",
+        "model_loaded": model_service.model_loaded,
+        "model_name": settings.CUSTOM_MODEL_PATH or settings.MODEL_NAME,
+        "version": settings.VERSION,
     }

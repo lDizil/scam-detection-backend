@@ -16,11 +16,6 @@ ml-service/
 │   ├── services/
 │   │   └── model_service.py      # ML модель и инференс
 │   └── main.py                   # FastAPI приложение
-├── training/
-│   ├── data/                     # Данные для обучения
-│   ├── models/                   # Дообученные модели
-│   ├── train.py                  # Скрипт обучения
-│   └── README.md                 # Инструкции по дообучению
 ├── Dockerfile
 ├── requirements.txt
 └── .env.example
@@ -181,54 +176,15 @@ docker run -p 8000:8000 scam-detection-ml
 }
 ```
 
-## Дообучение модели
-
-Если вам нужно дообучить модель на ваших собственных данных:
-
-1. Подготовьте CSV файл с данными:
-
-```csv
-text,label
-"Срочно! Ваш аккаунт заблокирован",1
-"Привет, как дела?",0
-```
-
-2. Положите данные в `training/data/train.csv` и `training/data/test.csv`
-
-3. Запустите обучение:
-
-```bash
-python training/train.py
-```
-
-4. Модель сохранится в `training/models/my_finetuned_model`
-
-5. Обновите `.env`:
-
-```
-CUSTOM_MODEL_PATH=./training/models/my_finetuned_model
-```
-
-6. Перезапустите сервис
-
-Подробнее: [training/README.md](training/README.md)
-
 ## Конфигурация
 
 Все настройки в `.env`:
 
 ```env
-# Модель
 MODEL_NAME=ealvaradob/bert-finetuned-phishing
 MODEL_CACHE_DIR=./models_cache
 MAX_LENGTH=512
-
-# Порог для классификации (0.0 - 1.0)
-# Чем выше - тем меньше ложных срабатываний, но больше пропусков
 PHISHING_THRESHOLD=0.5
-
-# Кастомная модель (опционально)
-CUSTOM_MODEL_PATH=./training/models/my_model
 ```
 
 ## Тестирование
@@ -261,7 +217,6 @@ curl -X POST http://localhost:8000/api/v1/analyze/batch \
 
 - Используйте batch endpoints для нескольких текстов
 - Модель загружается один раз при старте
-- PyTorch с оптимизацией для инференса
 
 ## Интеграция с Go Backend
 

@@ -1,7 +1,3 @@
-"""
-API endpoints для ML сервиса
-"""
-
 from fastapi import APIRouter, HTTPException, status
 from time import time
 import logging

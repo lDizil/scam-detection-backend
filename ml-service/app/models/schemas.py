@@ -1,14 +1,8 @@
-"""
-Pydantic схемы для API
-"""
-
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
 
 class TextAnalysisRequest(BaseModel):
-    """Запрос на анализ текста"""
-
     text: str = Field(
         ..., min_length=1, max_length=5000, description="Текст для анализа"
     )
@@ -22,8 +16,6 @@ class TextAnalysisRequest(BaseModel):
 
 
 class PredictionResult(BaseModel):
-    """Результат предсказания"""
-
     label: str = Field(..., description="Метка класса (phishing/legitimate)")
     confidence: float = Field(..., ge=0, le=1, description="Уверенность модели (0-1)")
     is_scam: bool = Field(..., description="Является ли текст мошенническим")
@@ -35,8 +27,6 @@ class PredictionResult(BaseModel):
 
 
 class TextAnalysisResponse(BaseModel):
-    """Ответ анализа текста"""
-
     success: bool = Field(..., description="Успешность операции")
     prediction: PredictionResult = Field(..., description="Результат предсказания")
     processing_time: float = Field(..., description="Время обработки в секундах")
@@ -56,8 +46,6 @@ class TextAnalysisResponse(BaseModel):
 
 
 class BatchTextAnalysisRequest(BaseModel):
-    """Запрос на пакетный анализ текстов"""
-
     texts: List[str] = Field(
         ..., min_length=1, max_length=100, description="Список текстов для анализа"
     )
@@ -74,8 +62,6 @@ class BatchTextAnalysisRequest(BaseModel):
 
 
 class BatchTextAnalysisResponse(BaseModel):
-    """Ответ пакетного анализа"""
-
     success: bool = Field(..., description="Успешность операции")
     predictions: List[PredictionResult] = Field(..., description="Список результатов")
     processing_time: float = Field(..., description="Общее время обработки")
@@ -94,8 +80,6 @@ class BatchTextAnalysisResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Статус здоровья сервиса"""
-
     status: str = Field(..., description="Статус сервиса")
     model_loaded: bool = Field(..., description="Загружена ли модель")
     model_name: str = Field(..., description="Название используемой модели")
@@ -113,8 +97,6 @@ class HealthResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """Ошибка"""
-
     success: bool = Field(False, description="Успешность операции")
     error: str = Field(..., description="Описание ошибки")
 

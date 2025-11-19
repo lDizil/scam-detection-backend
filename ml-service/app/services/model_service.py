@@ -1,7 +1,3 @@
-"""
-Сервис для работы с ML моделью
-"""
-
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import Dict, List, Tuple
@@ -13,8 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 class ModelService:
-    """Сервис для загрузки и инференса модели"""
-
     def __init__(self):
         self.model = None
         self.tokenizer = None
@@ -22,38 +16,51 @@ class ModelService:
         self.model_loaded = False
 
     async def load_model(self):
-        """Загрузка BERT модели для детекции фишинга"""
         try:
             logger.info("Начинаю загрузку модели...")
 
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             logger.info(f"Используется устройство: {self.device}")
 
+            if self.device.type == "cpu":
+                torch.set_num_threads(4)
+                logger.info("CPU режим: ограничено 4 потока")
+
             model_path = settings.CUSTOM_MODEL_PATH or settings.MODEL_NAME
 
             logger.info(f"Загрузка токенизатора из {model_path}...")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                model_path, cache_dir=settings.MODEL_CACHE_DIR
+                model_path, cache_dir=settings.MODEL_CACHE_DIR, local_files_only=False
             )
 
-            logger.info(f"Загрузка модели из {model_path}...")
+            logger.info(f"Загрузка модели из {model_path} (оптимизация памяти)...")
             self.model = AutoModelForSequenceClassification.from_pretrained(
-                model_path, cache_dir=settings.MODEL_CACHE_DIR
+                model_path,
+                cache_dir=settings.MODEL_CACHE_DIR,
+                torch_dtype=torch.float32,
+                low_cpu_mem_usage=True,
+                local_files_only=False,
             )
 
+            logger.info("Перенос модели на устройство...")
             self.model.to(self.device)
             self.model.eval()
 
+            import gc
+
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
             self.model_loaded = True
-            logger.info("✅ Модель успешно загружена!")
+            logger.info("Модель успешно загружена!")
 
         except Exception as e:
-            logger.error(f"❌ Ошибка при загрузке модели: {e}")
+            logger.error(f"Ошибка при загрузке модели: {e}")
             self.model_loaded = False
             raise
 
     def _preprocess(self, text: str) -> Dict:
-        """Токенизация и подготовка текста для модели"""
         inputs = self.tokenizer(
             text,
             padding=True,
@@ -66,7 +73,6 @@ class ModelService:
         return inputs
 
     def _postprocess(self, outputs) -> Tuple[str, float, bool]:
-        """Преобразование выхода модели в результат"""
         logits = outputs.logits
         probabilities = torch.nn.functional.softmax(logits, dim=-1)
         predicted_class = torch.argmax(probabilities, dim=-1).item()
@@ -78,7 +84,6 @@ class ModelService:
         return label, confidence, is_scam
 
     async def predict(self, text: str) -> Dict:
-        """Анализ одного текста"""
         if not self.model_loaded:
             raise RuntimeError("Model not loaded")
 
@@ -97,7 +102,6 @@ class ModelService:
             raise
 
     async def predict_batch(self, texts: List[str]) -> List[Dict]:
-        """Пакетный анализ текстов"""
         if not self.model_loaded:
             raise RuntimeError("Model not loaded")
 

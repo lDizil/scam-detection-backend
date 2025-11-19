@@ -77,6 +77,8 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 		return nil, nil, ErrInvalidCredentials
 	}
 
+	s.sessionService.CleanupExpiredSessions(ctx)
+
 	tokens, err := s.sessionService.GenerateSession(ctx, user.ID)
 	if err != nil {
 		return nil, nil, err

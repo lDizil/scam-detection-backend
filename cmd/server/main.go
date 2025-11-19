@@ -44,7 +44,7 @@ func main() {
 		log.Fatal("Не удалось подключиться к БД:", err)
 	}
 
-	if err := db.AutoMigrate(&models.User{}, &models.Check{}, &models.UserSessions{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Check{}, &models.CheckDetail{}, &models.UserSessions{}); err != nil {
 		log.Fatal("Ошибка миграций:", err)
 	}
 
@@ -79,7 +79,7 @@ func main() {
 		MaxAge:           12 * 3600,
 	}))
 
-	routes.SetupRoutes(r, authService, userService)
+	routes.SetupRoutes(r, db, authService, userService)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

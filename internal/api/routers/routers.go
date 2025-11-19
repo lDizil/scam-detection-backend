@@ -3,15 +3,19 @@ package routes
 import (
 	"scam-detection-backend/internal/api/handlers"
 	"scam-detection-backend/internal/api/middleware"
+	"scam-detection-backend/internal/repository"
 	"scam-detection-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func SetupRoutes(r *gin.Engine, authService *services.AuthService, userService services.UserService) {
+func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, userService services.UserService) {
 	authHandler := handlers.NewAuthHandler(authService, userService)
 	userHandler := handlers.NewUserHandler(userService)
-	analysisHandler := handlers.NewAnalysisHandler()
+
+	checkRepo := repository.NewCheckRepository(db)
+	analysisHandler := handlers.NewAnalysisHandler(checkRepo)
 
 	api := r.Group("/api/v1")
 	{
@@ -23,13 +27,17 @@ func SetupRoutes(r *gin.Engine, authService *services.AuthService, userService s
 			auth.POST("/refresh", authHandler.RefreshToken)
 		}
 
-		// ML Analysis endpoints (защищенные)
+		analysisPublic := api.Group("/analysis")
+		{
+			analysisPublic.GET("/health", analysisHandler.MLHealthCheck)
+		}
+
 		analysis := api.Group("/analysis")
 		analysis.Use(middleware.AuthMiddleware(authService))
 		{
 			analysis.POST("/text", analysisHandler.AnalyzeText)
 			analysis.POST("/batch", analysisHandler.AnalyzeBatch)
-			analysis.GET("/health", analysisHandler.MLHealthCheck)
+			analysis.GET("/history", analysisHandler.GetCheckHistory)
 		}
 
 		protected := api.Group("")
