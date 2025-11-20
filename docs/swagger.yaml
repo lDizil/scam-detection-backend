@@ -146,8 +146,6 @@ definitions:
         type: string
       updated_at:
         type: string
-      user:
-        $ref: '#/definitions/models.User'
       user_id:
         type: integer
     type: object
@@ -293,6 +291,63 @@ paths:
       security:
       - BearerAuth: []
       summary: История проверок пользователя
+      tags:
+      - analysis
+  /analysis/history/{id}:
+    delete:
+      description: Удаляет проверку из истории пользователя
+      parameters:
+      - description: ID проверки
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Успешно удалено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Нет доступа
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка БД
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить проверку
+      tags:
+      - analysis
+  /analysis/stats:
+    get:
+      description: Возвращает агрегированную статистику по проверкам пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Статистика
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка БД
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Статистика пользователя
       tags:
       - analysis
   /analysis/text:
