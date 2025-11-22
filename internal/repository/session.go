@@ -86,16 +86,19 @@ func (r *sessionRepository) InvalidateAllByUser(ctx context.Context, userID uint
 		return gorm.ErrInvalidData
 	}
 
-	result := r.db.Where("user_id = ?", userID).Delete(&models.UserSessions{})
+	result := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&models.UserSessions{})
 	err := result.Error
 	rowsAffected := result.RowsAffected
 
 	if err != nil {
+		log.Printf("InvalidateAllByUser: failed to delete sessions for user %d: %v", userID, err)
 		return fmt.Errorf("failed to invalidate all user sessions: %w", err)
 	}
 
+	log.Printf("InvalidateAllByUser: deleted %d sessions for user %d", rowsAffected, userID)
+
 	if rowsAffected == 0 {
-		log.Printf("InvalidateAllByUser: no user sessions found to delete")
+		log.Printf("InvalidateAllByUser: no user sessions found to delete for user %d", userID)
 	}
 
 	return nil

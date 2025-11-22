@@ -90,6 +90,14 @@ func (s *sessionService) ValidateAccessToken(token string) (uint, error) {
 	return claims.UserID, nil
 }
 
+func (s *sessionService) GetUserIDFromToken(token string) (uint, error) {
+	claims, err := jwt.ValidateJWT(token, s.jwtSecret)
+	if err != nil {
+		return 0, err
+	}
+	return claims.UserID, nil
+}
+
 func (s *sessionService) RefreshSession(ctx context.Context, refreshToken string) (*models.TokenPair, error) {
 	claims, err := jwt.ValidateJWT(refreshToken, s.jwtSecret)
 	if err != nil {

@@ -91,6 +91,10 @@ func (s *AuthService) ValidateToken(token string) (uint, error) {
 	return s.sessionService.ValidateAccessToken(token)
 }
 
+func (s *AuthService) GetUserIDFromRefreshToken(refreshToken string) (uint, error) {
+	return s.sessionService.GetUserIDFromToken(refreshToken)
+}
+
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*models.TokenPair, error) {
 	return s.sessionService.RefreshSession(ctx, refreshToken)
 }

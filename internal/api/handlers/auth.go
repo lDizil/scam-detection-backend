@@ -118,8 +118,21 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		refreshToken, err := c.Cookie("refresh_token")
+		if err == nil && refreshToken != "" {
+			userID, err = h.authService.GetUserIDFromRefreshToken(refreshToken)
+			if err == nil {
+				exists = true
+			}
+		}
+	}
+
 	if exists {
-		h.authService.LogoutAllDevices(c.Request.Context(), userID)
+		if err := h.authService.LogoutAllDevices(c.Request.Context(), userID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "не удалось удалить сессии"})
+			return
+		}
 	}
 
 	c.SetCookie(
