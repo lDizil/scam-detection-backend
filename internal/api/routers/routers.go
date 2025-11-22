@@ -23,8 +23,13 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, 
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
-			auth.POST("/logout", authHandler.Logout)
 			auth.POST("/refresh", authHandler.RefreshToken)
+		}
+
+		authProtected := api.Group("/auth")
+		authProtected.Use(middleware.AuthMiddleware(authService))
+		{
+			authProtected.POST("/logout", authHandler.Logout)
 		}
 
 		analysisPublic := api.Group("/analysis")
