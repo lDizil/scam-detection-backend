@@ -79,7 +79,7 @@ func main() {
 		MaxAge:           12 * 3600,
 	}))
 
-	routes.SetupRoutes(r, db, authService, userService)
+	routes.SetupRoutes(r, db, authService, userService, cfg)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

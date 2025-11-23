@@ -11,6 +11,11 @@ type Config struct {
 	Database DatabaseConfig
 	Server   ServerConfig
 	JWT      JWTConfig
+	URLhaus  URLhausConfig
+}
+
+type URLhausConfig struct {
+	AuthKey string
 }
 
 type JWTConfig struct {
@@ -55,6 +60,8 @@ func Load() *Config {
 	accessDuration := getEnv("JWT_ACCESS_DURATION", "60m")
 	refreshDuration := getEnv("JWT_REFRESH_DURATION", "168h")
 
+	urlhausAuthKey := getEnv("URLHAUS_AUTH_KEY", "")
+
 	config := &Config{
 		Database: DatabaseConfig{
 			Host:     host,
@@ -71,6 +78,9 @@ func Load() *Config {
 			Secret:               jwtSecret,
 			AccessTokenDuration:  accessDuration,
 			RefreshTokenDuration: refreshDuration,
+		},
+		URLhaus: URLhausConfig{
+			AuthKey: urlhausAuthKey,
 		},
 	}
 

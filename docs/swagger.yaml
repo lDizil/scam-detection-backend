@@ -25,6 +25,31 @@ definitions:
     required:
     - text
     type: object
+  handlers.AnalyzeURLRequest:
+    properties:
+      url:
+        example: https://example-phishing.com
+        type: string
+    required:
+    - url
+    type: object
+  handlers.AnalyzeURLResponse:
+    properties:
+      check_id:
+        type: integer
+      checked_at:
+        type: string
+      confidence:
+        type: number
+      reasons:
+        items:
+          type: string
+        type: array
+      url:
+        type: string
+      verdict:
+        type: string
+    type: object
   handlers.AuthResponse:
     properties:
       access_token:
@@ -380,6 +405,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Анализ текста на мошенничество
+      tags:
+      - analysis
+  /analysis/url:
+    post:
+      consumes:
+      - application/json
+      description: Проверяет ссылку через внешние API (Google Safe Browsing, PhishTank)
+        на фишинг и мошенничество
+      parameters:
+      - description: URL для проверки
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AnalyzeURLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Результат проверки
+          schema:
+            $ref: '#/definitions/handlers.AnalyzeURLResponse'
+        "400":
+          description: Невалидный URL
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Не авторизован
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка проверки
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Проверка URL на мошенничество
       tags:
       - analysis
   /auth/login:
