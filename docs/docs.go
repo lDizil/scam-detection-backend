@@ -251,6 +251,62 @@ const docTemplate = `{
                 }
             }
         },
+        "/analysis/image": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Извлекает текст из изображения (OCR) и анализирует его на предмет фишинга и мошенничества",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analysis"
+                ],
+                "summary": "Анализ изображения на мошенничество",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Изображение (JPG, PNG, BMP, TIFF)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Результат анализа изображения",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Невалидный файл",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка обработки",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/analysis/stats": {
             "get": {
                 "security": [
@@ -865,6 +921,9 @@ const docTemplate = `{
         "models.Check": {
             "type": "object",
             "properties": {
+                "check_type": {
+                    "type": "string"
+                },
                 "content": {
                     "type": "string"
                 },
@@ -879,6 +938,12 @@ const docTemplate = `{
                 },
                 "danger_score": {
                     "type": "number"
+                },
+                "extracted_text": {
+                    "type": "string"
+                },
+                "file_path": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer"

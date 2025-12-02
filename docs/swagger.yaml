@@ -151,6 +151,8 @@ definitions:
     type: object
   models.Check:
     properties:
+      check_type:
+        type: string
       content:
         type: string
       content_type:
@@ -161,6 +163,10 @@ definitions:
         type: string
       danger_score:
         type: number
+      extracted_text:
+        type: string
+      file_path:
+        type: string
       id:
         type: integer
       processing_time_ms:
@@ -349,6 +355,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Удалить проверку
+      tags:
+      - analysis
+  /analysis/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Извлекает текст из изображения (OCR) и анализирует его на предмет
+        фишинга и мошенничества
+      parameters:
+      - description: Изображение (JPG, PNG, BMP, TIFF)
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Результат анализа изображения
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Невалидный файл
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Не авторизован
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка обработки
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Анализ изображения на мошенничество
       tags:
       - analysis
   /analysis/stats:

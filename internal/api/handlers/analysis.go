@@ -2,7 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"scam-detection-backend/internal/api/middleware"
 	"scam-detection-backend/internal/config"
 	"scam-detection-backend/internal/mlclient"
@@ -473,6 +477,142 @@ func (h *AnalysisHandler) AnalyzeURL(c *gin.Context) {
 		Confidence: result.Confidence,
 		Reasons:    result.Reasons,
 		CheckedAt:  result.CheckedAt,
+	})
+}
+
+// AnalyzeImage godoc
+// @Summary      Анализ изображения на мошенничество
+// @Description  Извлекает текст из изображения (OCR) и анализирует его на предмет фишинга и мошенничества
+// @Tags         analysis
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        image formData file true "Изображение (JPG, PNG, BMP, TIFF)"
+// @Success      200 {object} map[string]interface{} "Результат анализа изображения"
+// @Failure      400 {object} ErrorResponse "Невалидный файл"
+// @Failure      401 {object} ErrorResponse "Не авторизован"
+// @Failure      500 {object} ErrorResponse "Ошибка обработки"
+// @Security     BearerAuth
+// @Router       /analysis/image [post]
+func (h *AnalysisHandler) AnalyzeImage(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	file, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No image file provided"})
+		return
+	}
+
+	allowedExts := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".bmp": true, ".tiff": true,
+	}
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if !allowedExts[ext] {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Unsupported file format. Allowed: JPG, PNG, BMP, TIFF"})
+		return
+	}
+
+	if file.Size > 10*1024*1024 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "File size exceeds 10MB limit"})
+		return
+	}
+
+	uploadDir := "./uploads"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create upload directory"})
+		return
+	}
+
+	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
+	savePath := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save file"})
+		return
+	}
+
+	imageFile, err := os.Open(savePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read uploaded file"})
+		return
+	}
+	defer imageFile.Close()
+
+	imageData, err := io.ReadAll(imageFile)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read image data"})
+		return
+	}
+
+	startTime := time.Now()
+	result, err := h.mlClient.AnalyzeImage(imageData, file.Filename)
+	processingTime := int(time.Since(startTime).Milliseconds())
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to analyze image: " + err.Error()})
+		return
+	}
+
+	title := "Image Analysis: " + file.Filename
+	if result.ExtractedText != "" && len([]rune(result.ExtractedText)) > 30 {
+		title = "Image: " + string([]rune(result.ExtractedText)[:30])
+	}
+
+	var dangerScore float64
+	if result.Prediction.IsScam {
+		dangerScore = result.Prediction.Confidence
+	} else {
+		dangerScore = 1.0 - result.Prediction.Confidence
+	}
+
+	check := &models.Check{
+		Title:          title,
+		ContentType:    "image",
+		Content:        result.ExtractedText,
+		CheckType:      "image",
+		FilePath:       savePath,
+		ExtractedText:  result.ExtractedText,
+		Status:         "completed",
+		UserID:         userID,
+		DangerScore:    dangerScore,
+		DangerLevel:    calculateDangerLevel(dangerScore),
+		ProcessingTime: processingTime,
+	}
+
+	if err := h.checkRepo.CreateCheck(check); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save check: " + err.Error()})
+		return
+	}
+
+	detailValue, _ := json.Marshal(map[string]interface{}{
+		"label":          result.Prediction.Label,
+		"is_scam":        result.Prediction.IsScam,
+		"extracted_text": result.ExtractedText,
+		"filename":       file.Filename,
+	})
+
+	detail := &models.CheckDetail{
+		CheckID:         check.ID,
+		FeatureName:     "image_analysis",
+		FeatureValue:    string(detailValue),
+		ConfidenceScore: result.Prediction.Confidence,
+	}
+
+	if err := h.checkRepo.AddCheckDetail(detail); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save check detail: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"check_id":        check.ID,
+		"success":         result.Success,
+		"extracted_text":  result.ExtractedText,
+		"prediction":      result.Prediction,
+		"processing_time": result.ProcessingTime,
+		"message":         result.Message,
 	})
 }
 

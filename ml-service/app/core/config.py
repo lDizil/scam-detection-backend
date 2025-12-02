@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     MODEL_CACHE_DIR: str = "./models_cache"
     MAX_LENGTH: int = 128
 
-    PHISHING_THRESHOLD: float = 0.5
+    PHISHING_THRESHOLD: float = 0.7
 
     CUSTOM_MODEL_PATH: Optional[str] = None
 

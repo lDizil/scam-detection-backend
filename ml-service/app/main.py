@@ -6,6 +6,7 @@ import logging
 from app.core.config import settings
 from app.api.endpoints import router
 from app.services.model_service import model_service
+from app.services.image_service import image_service
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -18,6 +19,7 @@ async def lifespan(app: FastAPI):
     logger.info("Запуск ML сервиса...")
     try:
         await model_service.load_model()
+        await image_service.load_reader()
         logger.info("ML сервис готов к работе")
     except Exception as e:
         logger.error(f" Ошибка при загрузке модели: {e}")
@@ -50,6 +52,7 @@ app = FastAPI(
     - `GET /health` - Проверка статуса сервиса
     - `POST /api/v1/analyze/text` - Анализ одного текста
     - `POST /api/v1/analyze/batch` - Пакетный анализ текстов
+    - `POST /api/v1/analyze/image` - Анализ изображения (OCR + детекция)
     
     ### Возможности дообучения:
     Сервис поддерживает загрузку кастомных дообученных моделей через переменную окружения `CUSTOM_MODEL_PATH`
@@ -86,8 +89,11 @@ async def root():
 @app.get("/health", tags=["Health"])
 async def health():
     return {
-        "status": "healthy" if model_service.model_loaded else "unhealthy",
+        "status": "healthy"
+        if model_service.model_loaded and image_service.loaded
+        else "unhealthy",
         "model_loaded": model_service.model_loaded,
+        "ocr_loaded": image_service.loaded,
         "model_name": settings.CUSTOM_MODEL_PATH or settings.MODEL_NAME,
         "version": settings.VERSION,
     }

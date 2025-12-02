@@ -102,3 +102,25 @@ class ErrorResponse(BaseModel):
 
     class Config:
         json_schema_extra = {"example": {"success": False, "error": "Model not loaded"}}
+
+
+class ImageAnalysisResponse(BaseModel):
+    success: bool = Field(..., description="Успешность операции")
+    extracted_text: str = Field(..., description="Извлеченный текст из изображения")
+    prediction: PredictionResult = Field(..., description="Результат анализа текста")
+    processing_time: float = Field(..., description="Время обработки в секундах")
+    message: Optional[str] = Field(None, description="Дополнительное сообщение")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "extracted_text": "Срочно! Ваша карта заблокирована. Подтвердите данные",
+                "prediction": {
+                    "label": "phishing",
+                    "confidence": 0.97,
+                    "is_scam": True,
+                },
+                "processing_time": 1.234,
+            }
+        }

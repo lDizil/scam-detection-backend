@@ -10,5 +10,5 @@ type CheckDetail struct {
 	ConfidenceScore float64   `json:"confidence_score"`
 	CreatedAt       time.Time `json:"created_at"`
 
-	Check Check `gorm:"foreignKey:CheckID" json:"-"`
+	Check Check `gorm:"foreignKey:CheckID;constraint:OnDelete:CASCADE" json:"-"`
 }

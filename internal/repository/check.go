@@ -69,7 +69,12 @@ func (r *checkRepository) GetCheckDetails(checkID uint) ([]models.CheckDetail, e
 }
 
 func (r *checkRepository) DeleteCheck(id uint, userID uint) error {
-	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Check{}).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("check_id = ?", id).Delete(&models.CheckDetail{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Check{}).Error
+	})
 }
 
 func (r *checkRepository) GetUserStats(userID uint) (map[string]interface{}, error) {
