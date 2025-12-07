@@ -11,3 +11,5 @@ easyocr==1.7.1
 opencv-python-headless==4.10.0.84
 python-multipart==0.0.9
 pillow==10.4.0
+openai-whisper==20240930
+ffmpeg-python==0.2.0

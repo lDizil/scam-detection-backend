@@ -616,6 +616,146 @@ func (h *AnalysisHandler) AnalyzeImage(c *gin.Context) {
 	})
 }
 
+// AnalyzeVideo godoc
+// @Summary      Анализ видео на мошенничество
+// @Description  Извлекает аудио из видео, транскрибирует через Whisper и анализирует на предмет мошенничества
+// @Tags         analysis
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        video formData file true "Видео (MP4, AVI, MOV, MKV, WEBM). Макс: 50MB, 5 минут"
+// @Success      200 {object} map[string]interface{} "Результат анализа видео"
+// @Failure      400 {object} ErrorResponse "Невалидный файл или превышен лимит"
+// @Failure      401 {object} ErrorResponse "Не авторизован"
+// @Failure      500 {object} ErrorResponse "Ошибка обработки"
+// @Security     BearerAuth
+// @Router       /analysis/video [post]
+func (h *AnalysisHandler) AnalyzeVideo(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	file, err := c.FormFile("video")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "No video file provided"})
+		return
+	}
+
+	allowedExts := map[string]bool{
+		".mp4": true, ".avi": true, ".mov": true, ".mkv": true, ".webm": true,
+	}
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if !allowedExts[ext] {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Unsupported file format. Allowed: MP4, AVI, MOV, MKV, WEBM"})
+		return
+	}
+
+	// Лимит 50MB
+	if file.Size > 50*1024*1024 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "File size exceeds 50MB limit"})
+		return
+	}
+
+	uploadDir := "./uploads"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create upload directory"})
+		return
+	}
+
+	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
+	savePath := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save file"})
+		return
+	}
+
+	videoFile, err := os.Open(savePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read uploaded file"})
+		return
+	}
+	defer videoFile.Close()
+
+	videoData, err := io.ReadAll(videoFile)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read video data"})
+		return
+	}
+
+	startTime := time.Now()
+	result, err := h.mlClient.AnalyzeVideo(videoData, file.Filename)
+	processingTime := int(time.Since(startTime).Milliseconds())
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to analyze video: " + err.Error()})
+		return
+	}
+
+	title := "Video Analysis: " + file.Filename
+	if result.Transcription != "" && len([]rune(result.Transcription)) > 30 {
+		title = "Video: " + string([]rune(result.Transcription)[:30])
+	}
+
+	var dangerScore float64
+	if result.Prediction.IsScam {
+		dangerScore = result.Prediction.Confidence
+	} else {
+		dangerScore = 1.0 - result.Prediction.Confidence
+	}
+
+	check := &models.Check{
+		Title:          title,
+		ContentType:    "video",
+		Content:        result.Transcription,
+		CheckType:      "video",
+		FilePath:       savePath,
+		ExtractedText:  result.Transcription,
+		Status:         "completed",
+		UserID:         userID,
+		DangerScore:    dangerScore,
+		DangerLevel:    calculateDangerLevel(dangerScore),
+		ProcessingTime: processingTime,
+	}
+
+	if err := h.checkRepo.CreateCheck(check); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save check: " + err.Error()})
+		return
+	}
+
+	detailValue, _ := json.Marshal(map[string]interface{}{
+		"label":    result.Prediction.Label,
+		"is_scam":  result.Prediction.IsScam,
+		"duration": result.Duration,
+		"language": result.Language,
+		"filename": file.Filename,
+	})
+
+	detail := &models.CheckDetail{
+		CheckID:         check.ID,
+		FeatureName:     "video_analysis",
+		FeatureValue:    string(detailValue),
+		ConfidenceScore: result.Prediction.Confidence,
+	}
+
+	if err := h.checkRepo.AddCheckDetail(detail); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save check detail: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"check_id":        check.ID,
+		"success":         result.Success,
+		"transcription":   result.Transcription,
+		"duration":        result.Duration,
+		"language":        result.Language,
+		"prediction":      result.Prediction,
+		"processing_time": result.ProcessingTime,
+		"message":         result.Message,
+	})
+}
+
 func mapVerdictToDangerLevel(verdict string) string {
 	switch verdict {
 	case "malicious":

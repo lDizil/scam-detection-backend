@@ -124,3 +124,29 @@ class ImageAnalysisResponse(BaseModel):
                 "processing_time": 1.234,
             }
         }
+
+
+class VideoAnalysisResponse(BaseModel):
+    success: bool = Field(..., description="Успешность операции")
+    transcription: str = Field(..., description="Транскрибированный текст из видео")
+    duration: float = Field(..., description="Длительность видео в секундах")
+    language: str = Field(..., description="Определенный язык аудио")
+    prediction: PredictionResult = Field(..., description="Результат анализа текста")
+    processing_time: float = Field(..., description="Время обработки в секундах")
+    message: Optional[str] = Field(None, description="Дополнительное сообщение")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "transcription": "Здравствуйте, вам звонят из службы безопасности банка...",
+                "duration": 45.5,
+                "language": "ru",
+                "prediction": {
+                    "label": "phishing",
+                    "confidence": 0.95,
+                    "is_scam": True,
+                },
+                "processing_time": 8.5,
+            }
+        }

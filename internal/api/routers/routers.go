@@ -45,6 +45,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, 
 			analysis.POST("/batch", analysisHandler.AnalyzeBatch)
 			analysis.POST("/url", analysisHandler.AnalyzeURL)
 			analysis.POST("/image", analysisHandler.AnalyzeImage)
+			analysis.POST("/video", analysisHandler.AnalyzeVideo)
 			analysis.GET("/history", analysisHandler.GetCheckHistory)
 			analysis.DELETE("/history/:id", analysisHandler.DeleteCheck)
 			analysis.GET("/stats", analysisHandler.GetStats)

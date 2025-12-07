@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.api.endpoints import router
 from app.services.model_service import model_service
 from app.services.image_service import image_service
+from app.services.video_service import video_service
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
     try:
         await model_service.load_model()
         await image_service.load_reader()
+        await video_service.load_model()
         logger.info("ML сервис готов к работе")
     except Exception as e:
         logger.error(f" Ошибка при загрузке модели: {e}")

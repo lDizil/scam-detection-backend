@@ -11,9 +11,11 @@ from app.models.schemas import (
     ErrorResponse,
     PredictionResult,
     ImageAnalysisResponse,
+    VideoAnalysisResponse,
 )
 from app.services.model_service import model_service
 from app.services.image_service import image_service
+from app.services.video_service import video_service
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -30,7 +32,7 @@ router = APIRouter()
 async def health_check():
     return HealthResponse(
         status="healthy"
-        if model_service.model_loaded and image_service.loaded
+        if model_service.model_loaded and image_service.loaded and video_service.loaded
         else "unhealthy",
         model_loaded=model_service.model_loaded,
         model_name=settings.CUSTOM_MODEL_PATH or settings.MODEL_NAME,
@@ -206,6 +208,114 @@ async def analyze_image(file: UploadFile = File(...)):
 
     except Exception as e:
         logger.error(f"Ошибка при анализе изображения: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
+@router.post(
+    "/analyze/video",
+    response_model=VideoAnalysisResponse,
+    responses={
+        200: {"description": "Успешный анализ видео"},
+        400: {
+            "model": ErrorResponse,
+            "description": "Неверный формат или превышен лимит",
+        },
+        500: {"model": ErrorResponse, "description": "Ошибка при анализе"},
+    },
+    summary="Анализ видео на мошенничество",
+    description="""
+    Извлекает аудио из видео, транскрибирует речь через Whisper и анализирует текст.
+    
+    **Что детектит:**
+    - Видеозвонки от "службы безопасности банка"
+    - Записи с просьбами перевести деньги
+    - Видеоинструкции по "выводу выигрыша"
+    - Голосовые сообщения с манипуляциями
+    
+    **Ограничения:**
+    - Максимальный размер: 50MB
+    - Максимальная длительность: 5 минут
+    
+    **Поддерживаемые форматы:** MP4, AVI, MOV, MKV, WEBM
+    """,
+)
+async def analyze_video(file: UploadFile = File(...)):
+    if not model_service.model_loaded or not video_service.loaded:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Models not loaded",
+        )
+
+    allowed_types = [
+        "video/mp4",
+        "video/avi",
+        "video/quicktime",
+        "video/x-msvideo",
+        "video/x-matroska",
+        "video/webm",
+    ]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Неподдерживаемый формат. Поддерживаются: MP4, AVI, MOV, MKV, WEBM",
+        )
+
+    try:
+        start_time = time()
+
+        video_bytes = await file.read()
+
+        logger.info(
+            f"Транскрибация видео {file.filename} ({len(video_bytes) / 1024 / 1024:.1f}MB)..."
+        )
+
+        transcription_result = await video_service.transcribe_video(
+            video_bytes, file.filename
+        )
+        transcription = transcription_result["transcription"]
+        duration = transcription_result["duration"]
+        language = transcription_result["language"]
+
+        if not transcription:
+            return VideoAnalysisResponse(
+                success=True,
+                transcription="",
+                duration=duration,
+                language=language,
+                prediction=PredictionResult(
+                    label="legitimate", confidence=0.0, is_scam=False
+                ),
+                processing_time=time() - start_time,
+                message="Речь не обнаружена в видео",
+            )
+
+        logger.info(f"Анализ транскрипции: {transcription[:100]}...")
+        prediction = await model_service.predict(transcription)
+
+        processing_time = time() - start_time
+
+        logger.info(
+            f"Анализ видео завершен: duration={duration:.1f}s, chars={len(transcription)}, "
+            f"label={prediction['label']}, confidence={prediction['confidence']:.3f}, "
+            f"time={processing_time:.3f}s"
+        )
+
+        return VideoAnalysisResponse(
+            success=True,
+            transcription=transcription,
+            duration=duration,
+            language=language,
+            prediction=PredictionResult(**prediction),
+            processing_time=processing_time,
+        )
+
+    except ValueError as e:
+        logger.warning(f"Ошибка валидации видео: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Ошибка при анализе видео: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )

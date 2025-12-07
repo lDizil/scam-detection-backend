@@ -11,8 +11,10 @@ import (
 )
 
 type MLClient struct {
-	baseURL    string
-	httpClient *http.Client
+	baseURL         string
+	httpClient      *http.Client
+	imageHTTPClient *http.Client
+	videoHTTPClient *http.Client
 }
 
 type TextAnalysisRequest struct {
@@ -49,6 +51,16 @@ type ImageAnalysisResponse struct {
 	Message        string           `json:"message,omitempty"`
 }
 
+type VideoAnalysisResponse struct {
+	Success        bool             `json:"success"`
+	Transcription  string           `json:"transcription"`
+	Duration       float64          `json:"duration"`
+	Language       string           `json:"language"`
+	Prediction     PredictionResult `json:"prediction"`
+	ProcessingTime float64          `json:"processing_time"`
+	Message        string           `json:"message,omitempty"`
+}
+
 type HealthResponse struct {
 	Status      string `json:"status"`
 	ModelLoaded bool   `json:"model_loaded"`
@@ -66,6 +78,12 @@ func NewMLClient() *MLClient {
 		baseURL: baseURL,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
+		},
+		imageHTTPClient: &http.Client{
+			Timeout: 2 * time.Minute, // OCR может занять время
+		},
+		videoHTTPClient: &http.Client{
+			Timeout: 5 * time.Minute, // Видео анализ с Whisper занимает много времени
 		},
 	}
 }
@@ -179,7 +197,7 @@ func (c *MLClient) AnalyzeImage(imageData []byte, filename string) (*ImageAnalys
 
 	req.Header.Set("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", boundary))
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.imageHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request to ML service: %w", err)
 	}
@@ -191,6 +209,58 @@ func (c *MLClient) AnalyzeImage(imageData []byte, filename string) (*ImageAnalys
 	}
 
 	var result ImageAnalysisResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &result, nil
+}
+
+func (c *MLClient) AnalyzeVideo(videoData []byte, filename string) (*VideoAnalysisResponse, error) {
+	body := &bytes.Buffer{}
+	writer := io.Writer(body)
+
+	contentType := "video/mp4"
+	if len(filename) > 4 {
+		ext := filename[len(filename)-4:]
+		switch ext {
+		case ".avi":
+			contentType = "video/avi"
+		case ".mov":
+			contentType = "video/quicktime"
+		case ".mkv":
+			contentType = "video/x-matroska"
+		case "webm":
+			contentType = "video/webm"
+		}
+	}
+
+	boundary := "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+	writer.Write([]byte(fmt.Sprintf("--%s\r\n", boundary)))
+	writer.Write([]byte(fmt.Sprintf("Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n", filename)))
+	writer.Write([]byte(fmt.Sprintf("Content-Type: %s\r\n\r\n", contentType)))
+	writer.Write(videoData)
+	writer.Write([]byte(fmt.Sprintf("\r\n--%s--\r\n", boundary)))
+
+	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/analyze/video", body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", boundary))
+
+	resp, err := c.videoHTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request to ML service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ML service returned error: status %d, body: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var result VideoAnalysisResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
