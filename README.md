@@ -166,6 +166,7 @@ uvicorn app.main:app --reload
 - `POST /api/v1/auth/login` - вход (username или email)
 - `POST /api/v1/auth/logout` - выход
 - `POST /api/v1/auth/refresh` - обновить токены
+- `GET /api/v1/analysis/health` - статус ML сервиса
 
 **Защищённые (требуется JWT):**
 
@@ -173,11 +174,28 @@ uvicorn app.main:app --reload
 - `PUT /api/v1/profile` - обновить профиль
 - `DELETE /api/v1/account` - удалить аккаунт
 
-**ML Analysis (защищённые):**
+**ML Analysis (user + moderator + admin):**
 
 - `POST /api/v1/analysis/text` - анализ текста на мошенничество
 - `POST /api/v1/analysis/batch` - пакетный анализ текстов
-- `GET /api/v1/analysis/health` - статус ML сервиса
+- `POST /api/v1/analysis/url` - анализ URL
+- `POST /api/v1/analysis/image` - анализ изображения
+- `POST /api/v1/analysis/video` - анализ видео
+- `GET /api/v1/analysis/history` - история проверок
+- `DELETE /api/v1/analysis/history/:id` - удалить проверку
+- `GET /api/v1/analysis/stats` - статистика пользователя
+
+**Модераторские (moderator + admin):**
+
+- `GET /api/v1/analysis/all` - все проверки (с пагинацией)
+- `GET /api/v1/analysis/global-stats` - глобальная статистика
+
+**Админские (только admin):**
+
+- `GET /api/v1/admin/users` - список пользователей
+- `GET /api/v1/admin/users/:id` - информация о пользователе
+- `PUT /api/v1/admin/users/:id/role` - изменить роль
+- `PUT /api/v1/admin/users/:id/status` - заблокировать/разблокировать
 
 **Примеры:**
 
@@ -425,6 +443,31 @@ console.log(result.prediction); // {label: "phishing", confidence: 0.97, is_scam
 - Все `/api/v1/analysis/*` endpoint'ы требуют JWT
 - Валидация токена на каждом запросе
 - Проверка активности сессии в БД
+
+**RBAC (Role-Based Access Control)**
+
+Система управления доступом на основе ролей:
+
+- **user** - обычный пользователь (по умолчанию при регистрации)
+  - Анализ контента (текст, URL, изображения, видео)
+  - Просмотр своей истории и статистики
+- **moderator** - модератор
+  - Все права user +
+  - Просмотр всех проверок пользователей (`GET /api/v1/analysis/all`)
+  - Глобальная статистика (`GET /api/v1/analysis/global-stats`)
+- **admin** - администратор
+  - Все права moderator +
+  - Управление пользователями (`GET /api/v1/admin/users`)
+  - Изменение ролей (`PUT /api/v1/admin/users/:id/role`)
+  - Блокировка пользователей (`PUT /api/v1/admin/users/:id/status`)
+
+Endpoint'ы защищены middleware `RequireRole()`, который проверяет права доступа и возвращает `403 Forbidden` при недостатке прав.
+
+Первого админа создайте вручную:
+
+```sql
+UPDATE users SET role = 'admin' WHERE username = 'your_username';
+```
 
 ### CORS
 

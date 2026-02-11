@@ -9,6 +9,7 @@ type User struct {
 	Username     string    `gorm:"uniqueIndex;not null" json:"username"`
 	Email        *string   `gorm:"uniqueIndex" json:"email"`
 	PasswordHash string    `gorm:"not null" json:"-"`
+	Role         Role      `gorm:"type:varchar(20);default:'user';not null" json:"role"`
 	IsActive     bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

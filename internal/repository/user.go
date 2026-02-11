@@ -130,3 +130,47 @@ func (r *userRepository) Delete(id uint) error {
 	}
 	return nil
 }
+
+func (r *userRepository) GetAll(limit, offset int) ([]models.User, int64, error) {
+	var users []models.User
+	var total int64
+
+	if err := r.db.Model(&models.User{}).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	err := r.db.Limit(limit).Offset(offset).Find(&users).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get users: %w", err)
+	}
+
+	return users, total, nil
+}
+
+func (r *userRepository) UpdateRole(id uint, role models.Role) error {
+	result := r.db.Model(&models.User{}).Where("id = ?", id).Update("role", role)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user role: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
+func (r *userRepository) UpdateActiveStatus(id uint, isActive bool) error {
+	result := r.db.Model(&models.User{}).Where("id = ?", id).Update("is_active", isActive)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user status: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}

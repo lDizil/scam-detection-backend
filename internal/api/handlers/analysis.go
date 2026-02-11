@@ -770,3 +770,71 @@ func mapVerdictToDangerLevel(verdict string) string {
 		return "unknown"
 	}
 }
+
+// GetAllChecks godoc
+// @Summary      Получить все проверки (только moderator/admin)
+// @Description  Возвращает список всех проверок всех пользователей. Доступно модераторам и администраторам.
+// @Tags         analysis
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Номер страницы" default(1)
+// @Param        limit query int false "Количество на странице" default(20)
+// @Success      200 {object} map[string]interface{}
+// @Failure      403 {object} ErrorResponse
+// @Failure      500 {object} ErrorResponse
+// @Security     CookieAuth
+// @Router       /analysis/all [get]
+func (h *AnalysisHandler) GetAllChecks(c *gin.Context) {
+	page := 1
+	limit := 20
+
+	if p, exists := c.GetQuery("page"); exists {
+		fmt.Sscanf(p, "%d", &page)
+	}
+	if l, exists := c.GetQuery("limit"); exists {
+		fmt.Sscanf(l, "%d", &limit)
+	}
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	offset := (page - 1) * limit
+
+	checks, total, err := h.checkRepo.GetAllChecks(limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to fetch checks"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"checks": checks,
+		"total":  total,
+		"page":   page,
+		"limit":  limit,
+	})
+}
+
+// GetGlobalStats godoc
+// @Summary      Глобальная статистика (только moderator/admin)
+// @Description  Возвращает статистику по всем проверкам всех пользователей. Доступно модераторам и администраторам.
+// @Tags         analysis
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Failure      403 {object} ErrorResponse
+// @Failure      500 {object} ErrorResponse
+// @Security     CookieAuth
+// @Router       /analysis/global-stats [get]
+func (h *AnalysisHandler) GetGlobalStats(c *gin.Context) {
+	stats, err := h.checkRepo.GetGlobalStats()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to fetch global statistics"})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
+}

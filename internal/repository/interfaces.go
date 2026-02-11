@@ -15,17 +15,22 @@ type UserRepository interface {
 	GetByUsernameOrEmail(login string) (*models.User, error)
 	Update(id uint, data *models.UpdateUserRequest) error
 	Delete(id uint) error
+	GetAll(limit, offset int) ([]models.User, int64, error)
+	UpdateRole(id uint, role models.Role) error
+	UpdateActiveStatus(id uint, isActive bool) error
 }
 
 type CheckRepository interface {
 	CreateCheck(check *models.Check) error
 	GetCheckByID(id uint) (*models.Check, error)
 	GetChecksByUserID(userID uint, limit, offset int) ([]models.Check, int64, error)
+	GetAllChecks(limit, offset int) ([]models.Check, int64, error)
 	UpdateCheckStatus(id uint, status string, dangerScore float64, dangerLevel string, processingTime int) error
 	AddCheckDetail(detail *models.CheckDetail) error
 	GetCheckDetails(checkID uint) ([]models.CheckDetail, error)
 	DeleteCheck(id uint, userID uint) error
 	GetUserStats(userID uint) (map[string]interface{}, error)
+	GetGlobalStats() (map[string]interface{}, error)
 }
 
 type SessionRepository interface {

@@ -45,6 +45,25 @@ func (r *checkRepository) GetChecksByUserID(userID uint, limit, offset int) ([]m
 	return checks, total, nil
 }
 
+func (r *checkRepository) GetAllChecks(limit, offset int) ([]models.Check, int64, error) {
+	var checks []models.Check
+	var total int64
+
+	if err := r.db.Model(&models.Check{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := r.db.Preload("User").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&checks).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return checks, total, nil
+}
+
 func (r *checkRepository) UpdateCheckStatus(id uint, status string, dangerScore float64, dangerLevel string, processingTime int) error {
 	return r.db.Model(&models.Check{}).
 		Where("id = ?", id).
@@ -91,6 +110,64 @@ func (r *checkRepository) GetUserStats(userID uint) (map[string]interface{}, err
 
 	stats := map[string]interface{}{
 		"total_analyses":          total,
+		"safe_count":              0,
+		"suspicious_count":        0,
+		"dangerous_count":         0,
+		"average_risk_score":      0.0,
+		"average_processing_time": 0,
+	}
+
+	if total == 0 {
+		return stats, nil
+	}
+
+	var safeCount, suspiciousCount, dangerousCount int
+	var totalRisk float64
+	var totalTime int
+
+	for _, check := range checks {
+		totalRisk += check.DangerScore
+		totalTime += check.ProcessingTime
+
+		switch check.DangerLevel {
+		case "low":
+			safeCount++
+		case "medium":
+			suspiciousCount++
+		case "high", "critical":
+			dangerousCount++
+		}
+	}
+
+	stats["safe_count"] = safeCount
+	stats["suspicious_count"] = suspiciousCount
+	stats["dangerous_count"] = dangerousCount
+	stats["average_risk_score"] = totalRisk / float64(total)
+	stats["average_processing_time"] = totalTime / int(total)
+
+	return stats, nil
+}
+
+func (r *checkRepository) GetGlobalStats() (map[string]interface{}, error) {
+	var total int64
+	var checks []models.Check
+
+	if err := r.db.Model(&models.Check{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	if err := r.db.Find(&checks).Error; err != nil {
+		return nil, err
+	}
+
+	var totalUsers int64
+	if err := r.db.Model(&models.User{}).Count(&totalUsers).Error; err != nil {
+		return nil, err
+	}
+
+	stats := map[string]interface{}{
+		"total_analyses":          total,
+		"total_users":             totalUsers,
 		"safe_count":              0,
 		"suspicious_count":        0,
 		"dangerous_count":         0,

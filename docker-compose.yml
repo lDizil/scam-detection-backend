@@ -68,6 +68,9 @@ services:
       - CUSTOM_MODEL_PATH=/app/training/finetuned_model
       - MODEL_CACHE_DIR=/app/models_cache
       - PHISHING_THRESHOLD=0.5
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
 volumes:
   postgres_data:

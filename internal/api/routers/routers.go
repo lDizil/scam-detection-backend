@@ -4,6 +4,7 @@ import (
 	"scam-detection-backend/internal/api/handlers"
 	"scam-detection-backend/internal/api/middleware"
 	"scam-detection-backend/internal/config"
+	"scam-detection-backend/internal/models"
 	"scam-detection-backend/internal/repository"
 	"scam-detection-backend/internal/services"
 
@@ -14,6 +15,7 @@ import (
 func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, userService services.UserService, cfg *config.Config) {
 	authHandler := handlers.NewAuthHandler(authService, userService)
 	userHandler := handlers.NewUserHandler(userService)
+	adminHandler := handlers.NewAdminHandler(userService)
 
 	checkRepo := repository.NewCheckRepository(db)
 	analysisHandler := handlers.NewAnalysisHandler(checkRepo, cfg)
@@ -40,6 +42,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, 
 
 		analysis := api.Group("/analysis")
 		analysis.Use(middleware.AuthMiddleware(authService))
+		analysis.Use(middleware.RequireRole(userService, models.RoleUser, models.RoleModerator, models.RoleAdmin))
 		{
 			analysis.POST("/text", analysisHandler.AnalyzeText)
 			analysis.POST("/batch", analysisHandler.AnalyzeBatch)
@@ -49,6 +52,24 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, 
 			analysis.GET("/history", analysisHandler.GetCheckHistory)
 			analysis.DELETE("/history/:id", analysisHandler.DeleteCheck)
 			analysis.GET("/stats", analysisHandler.GetStats)
+		}
+
+		moderatorAnalysis := api.Group("/analysis")
+		moderatorAnalysis.Use(middleware.AuthMiddleware(authService))
+		moderatorAnalysis.Use(middleware.RequireRole(userService, models.RoleModerator, models.RoleAdmin))
+		{
+			moderatorAnalysis.GET("/all", analysisHandler.GetAllChecks)
+			moderatorAnalysis.GET("/global-stats", analysisHandler.GetGlobalStats)
+		}
+
+		adminUsers := api.Group("/admin/users")
+		adminUsers.Use(middleware.AuthMiddleware(authService))
+		adminUsers.Use(middleware.RequireRole(userService, models.RoleAdmin))
+		{
+			adminUsers.GET("", adminHandler.GetAllUsers)
+			adminUsers.GET("/:id", adminHandler.GetUserByID)
+			adminUsers.PUT("/:id/role", adminHandler.UpdateUserRole)
+			adminUsers.PUT("/:id/status", adminHandler.ToggleUserStatus)
 		}
 
 		protected := api.Group("")

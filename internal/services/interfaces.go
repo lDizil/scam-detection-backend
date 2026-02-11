@@ -7,8 +7,12 @@ import (
 
 type UserService interface {
 	GetByID(id uint) (*models.User, error)
+	GetUserByID(id uint) (*models.User, error)
 	Update(id uint, data *models.UpdateUserRequest) error
 	Delete(id uint) error
+	GetAllUsers(limit, offset int) ([]models.User, int64, error)
+	UpdateUserRole(id uint, role models.Role) error
+	ToggleUserActiveStatus(id uint, isActive bool) error
 }
 
 type SessionService interface {
