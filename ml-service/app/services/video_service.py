@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # Лимиты для видео
 MAX_VIDEO_SIZE_MB = 50
-MAX_VIDEO_DURATION_SEC = 300  # 5 минут
+MAX_VIDEO_DURATION_SEC = 300
 
 
 class VideoService:
@@ -18,7 +18,6 @@ class VideoService:
         self.loaded = False
 
     async def load_model(self):
-        """Загрузка Whisper модели (small - баланс скорость/качность)"""
         try:
             logger.info("Загрузка Whisper модели (small)...")
             self.model = whisper.load_model("small")
@@ -30,7 +29,6 @@ class VideoService:
             raise
 
     def _extract_audio(self, video_path: str, audio_path: str) -> bool:
-        """Извлекает аудио из видео с помощью FFmpeg"""
         try:
             (
                 ffmpeg.input(video_path)
@@ -44,7 +42,6 @@ class VideoService:
             return False
 
     def _get_video_duration(self, video_path: str) -> float:
-        """Получает длительность видео в секундах"""
         try:
             probe = ffmpeg.probe(video_path)
             duration = float(probe["format"]["duration"])
@@ -67,35 +64,29 @@ class VideoService:
         if not self.loaded:
             raise RuntimeError("Whisper модель не загружена")
 
-        # Проверка размера
         size_mb = len(video_bytes) / (1024 * 1024)
         if size_mb > MAX_VIDEO_SIZE_MB:
             raise ValueError(
                 f"Размер видео {size_mb:.1f}MB превышает лимит {MAX_VIDEO_SIZE_MB}MB"
             )
 
-        # Создаем временные файлы
         with tempfile.TemporaryDirectory() as temp_dir:
             video_path = os.path.join(temp_dir, filename)
             audio_path = os.path.join(temp_dir, "audio.wav")
 
-            # Сохраняем видео
             with open(video_path, "wb") as f:
                 f.write(video_bytes)
 
-            # Проверяем длительность
             duration = self._get_video_duration(video_path)
             if duration > MAX_VIDEO_DURATION_SEC:
                 raise ValueError(
                     f"Длительность видео {duration:.0f}с превышает лимит {MAX_VIDEO_DURATION_SEC}с (5 минут)"
                 )
 
-            # Извлекаем аудио
             logger.info(f"Извлечение аудио из {filename}...")
             if not self._extract_audio(video_path, audio_path):
                 raise RuntimeError("Не удалось извлечь аудио из видео")
 
-            # Транскрибируем
             logger.info("Транскрибация аудио через Whisper...")
             result = self.model.transcribe(audio_path, language="ru", task="transcribe")
 
