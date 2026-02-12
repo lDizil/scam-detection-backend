@@ -20,6 +20,11 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, 
 	checkRepo := repository.NewCheckRepository(db)
 	analysisHandler := handlers.NewAnalysisHandler(checkRepo, cfg)
 
+	seoHandler := handlers.NewSEOHandler(cfg.Server.BaseURL)
+
+	r.GET("/sitemap.xml", seoHandler.Sitemap)
+	r.GET("/robots.txt", seoHandler.Robots)
+
 	api := r.Group("/api/v1")
 	{
 		auth := api.Group("/auth")
@@ -39,6 +44,11 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, authService *services.AuthService, 
 		{
 			analysisPublic.GET("/health", analysisHandler.MLHealthCheck)
 		}
+
+		api.GET("/structured-data", seoHandler.StructuredData)
+		api.GET("/health/structured-data", seoHandler.HealthStructuredData)
+
+		api.GET("/files/*filepath", analysisHandler.GetFile)
 
 		analysis := api.Group("/analysis")
 		analysis.Use(middleware.AuthMiddleware(authService))

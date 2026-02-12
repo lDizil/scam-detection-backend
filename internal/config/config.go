@@ -42,8 +42,9 @@ type DatabaseConfig struct {
 }
 
 type ServerConfig struct {
-	Port string
-	Mode string
+	Port    string
+	Mode    string
+	BaseURL string
 }
 
 func getEnv(key, defaultValue string) string {
@@ -64,6 +65,7 @@ func Load() *Config {
 
 	serverPort := getEnv("SERVER_PORT", "8080")
 	serverMode := getEnv("SERVER_MODE", "debug")
+	baseURL := getEnv("BASE_URL", "http://localhost:8080")
 
 	jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-in-production")
 	accessDuration := getEnv("JWT_ACCESS_DURATION", "60m")
@@ -86,8 +88,9 @@ func Load() *Config {
 			Name:     name,
 		},
 		Server: ServerConfig{
-			Port: serverPort,
-			Mode: serverMode,
+			Port:    serverPort,
+			Mode:    serverMode,
+			BaseURL: baseURL,
 		},
 		JWT: JWTConfig{
 			Secret:               jwtSecret,
