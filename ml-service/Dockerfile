@@ -26,9 +26,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY ./app ./app
 
-RUN mkdir -p /app/models_cache
+RUN mkdir -p /app/models_cache /root/.cache/whisper /root/.EasyOCR/model
 
-RUN python -c "import whisper; whisper.load_model('small', download_root='/root/.cache/whisper')" || echo "Whisper model download skipped"
+
 
 EXPOSE 8000
 

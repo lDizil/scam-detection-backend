@@ -65,6 +65,8 @@ services:
       - "8000:8000"
     volumes:
       - ml_models_cache:/app/models_cache
+      - whisper_cache:/root/.cache/whisper
+      - easyocr_cache:/root/.EasyOCR/model
       - ./ml-service/training:/app/training
     environment:
       - CUSTOM_MODEL_PATH=/app/training/finetuned_model
@@ -97,4 +99,6 @@ volumes:
   postgres_data:
   pgadmin_data:
   ml_models_cache:
+  whisper_cache:
+  easyocr_cache:
   minio_data:
