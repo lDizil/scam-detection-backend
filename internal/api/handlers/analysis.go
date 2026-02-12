@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"scam-detection-backend/internal/api/middleware"
 	"scam-detection-backend/internal/config"
@@ -13,6 +13,7 @@ import (
 	"scam-detection-backend/internal/models"
 	"scam-detection-backend/internal/repository"
 	"scam-detection-backend/internal/services"
+	"scam-detection-backend/internal/storage"
 	"strings"
 	"time"
 
@@ -23,13 +24,29 @@ type AnalysisHandler struct {
 	mlClient        *mlclient.MLClient
 	checkRepo       repository.CheckRepository
 	urlCheckService *services.URLCheckService
+	minioClient     *storage.MinIOClient
 }
 
 func NewAnalysisHandler(checkRepo repository.CheckRepository, cfg *config.Config) *AnalysisHandler {
+	fmt.Printf("Creating MinIO client with endpoint: %s\n", cfg.MinIO.Endpoint)
+	minioClient, err := storage.NewMinIOClient(storage.MinIOConfig{
+		Endpoint:  cfg.MinIO.Endpoint,
+		AccessKey: cfg.MinIO.AccessKey,
+		SecretKey: cfg.MinIO.SecretKey,
+		Bucket:    cfg.MinIO.Bucket,
+		UseSSL:    cfg.MinIO.UseSSL,
+	})
+	if err != nil {
+		fmt.Printf("ERROR: Failed to create MinIO client: %v\n", err)
+		panic(fmt.Sprintf("Failed to create MinIO client: %v", err))
+	}
+	fmt.Println("MinIO client created successfully")
+
 	return &AnalysisHandler{
 		mlClient:        mlclient.NewMLClient(),
 		checkRepo:       checkRepo,
 		urlCheckService: services.NewURLCheckService(cfg.URLhaus.AuthKey),
+		minioClient:     minioClient,
 	}
 }
 
@@ -520,30 +537,38 @@ func (h *AnalysisHandler) AnalyzeImage(c *gin.Context) {
 		return
 	}
 
-	uploadDir := "./uploads"
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create upload directory"})
-		return
-	}
-
-	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
-	savePath := filepath.Join(uploadDir, filename)
-
-	if err := c.SaveUploadedFile(file, savePath); err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save file"})
-		return
-	}
-
-	imageFile, err := os.Open(savePath)
+	fileReader, err := file.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read uploaded file"})
 		return
 	}
-	defer imageFile.Close()
+	defer fileReader.Close()
 
-	imageData, err := io.ReadAll(imageFile)
+	imageData, err := io.ReadAll(fileReader)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read image data"})
+		return
+	}
+
+	contentType := "image/jpeg"
+	switch ext {
+	case ".png":
+		contentType = "image/png"
+	case ".bmp":
+		contentType = "image/bmp"
+	case ".tiff":
+		contentType = "image/tiff"
+	}
+
+	imageURL, err := h.minioClient.UploadFile(
+		c.Request.Context(),
+		bytes.NewReader(imageData),
+		file.Filename,
+		contentType,
+		file.Size,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to upload file to storage: " + err.Error()})
 		return
 	}
 
@@ -573,7 +598,7 @@ func (h *AnalysisHandler) AnalyzeImage(c *gin.Context) {
 		ContentType:    "image",
 		Content:        result.ExtractedText,
 		CheckType:      "image",
-		FilePath:       savePath,
+		FilePath:       imageURL,
 		ExtractedText:  result.ExtractedText,
 		Status:         "completed",
 		UserID:         userID,
@@ -592,6 +617,7 @@ func (h *AnalysisHandler) AnalyzeImage(c *gin.Context) {
 		"is_scam":        result.Prediction.IsScam,
 		"extracted_text": result.ExtractedText,
 		"filename":       file.Filename,
+		"image_url":      imageURL,
 	})
 
 	detail := &models.CheckDetail{
@@ -657,30 +683,40 @@ func (h *AnalysisHandler) AnalyzeVideo(c *gin.Context) {
 		return
 	}
 
-	uploadDir := "./uploads"
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create upload directory"})
-		return
-	}
-
-	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
-	savePath := filepath.Join(uploadDir, filename)
-
-	if err := c.SaveUploadedFile(file, savePath); err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save file"})
-		return
-	}
-
-	videoFile, err := os.Open(savePath)
+	fileReader, err := file.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read uploaded file"})
 		return
 	}
-	defer videoFile.Close()
+	defer fileReader.Close()
 
-	videoData, err := io.ReadAll(videoFile)
+	videoData, err := io.ReadAll(fileReader)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to read video data"})
+		return
+	}
+
+	contentType := "video/mp4"
+	switch ext {
+	case ".avi":
+		contentType = "video/x-msvideo"
+	case ".mov":
+		contentType = "video/quicktime"
+	case ".mkv":
+		contentType = "video/x-matroska"
+	case ".webm":
+		contentType = "video/webm"
+	}
+
+	videoURL, err := h.minioClient.UploadFile(
+		c.Request.Context(),
+		bytes.NewReader(videoData),
+		file.Filename,
+		contentType,
+		file.Size,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to upload file to storage: " + err.Error()})
 		return
 	}
 
@@ -710,7 +746,7 @@ func (h *AnalysisHandler) AnalyzeVideo(c *gin.Context) {
 		ContentType:    "video",
 		Content:        result.Transcription,
 		CheckType:      "video",
-		FilePath:       savePath,
+		FilePath:       videoURL,
 		ExtractedText:  result.Transcription,
 		Status:         "completed",
 		UserID:         userID,
@@ -725,11 +761,12 @@ func (h *AnalysisHandler) AnalyzeVideo(c *gin.Context) {
 	}
 
 	detailValue, _ := json.Marshal(map[string]interface{}{
-		"label":    result.Prediction.Label,
-		"is_scam":  result.Prediction.IsScam,
-		"duration": result.Duration,
-		"language": result.Language,
-		"filename": file.Filename,
+		"label":     result.Prediction.Label,
+		"is_scam":   result.Prediction.IsScam,
+		"duration":  result.Duration,
+		"language":  result.Language,
+		"filename":  file.Filename,
+		"video_url": videoURL,
 	})
 
 	detail := &models.CheckDetail{

@@ -12,6 +12,15 @@ type Config struct {
 	Server   ServerConfig
 	JWT      JWTConfig
 	URLhaus  URLhausConfig
+	MinIO    MinIOConfig
+}
+
+type MinIOConfig struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	UseSSL    bool
 }
 
 type URLhausConfig struct {
@@ -62,6 +71,12 @@ func Load() *Config {
 
 	urlhausAuthKey := getEnv("URLHAUS_AUTH_KEY", "")
 
+	minioEndpoint := getEnv("MINIO_ENDPOINT", "localhost:9000")
+	minioAccessKey := getEnv("MINIO_ACCESS_KEY", "minioadmin")
+	minioSecretKey := getEnv("MINIO_SECRET_KEY", "minioadmin123")
+	minioBucket := getEnv("MINIO_BUCKET", "scam-images")
+	minioUseSSL := getEnv("MINIO_USE_SSL", "false") == "true"
+
 	config := &Config{
 		Database: DatabaseConfig{
 			Host:     host,
@@ -81,6 +96,13 @@ func Load() *Config {
 		},
 		URLhaus: URLhausConfig{
 			AuthKey: urlhausAuthKey,
+		},
+		MinIO: MinIOConfig{
+			Endpoint:  minioEndpoint,
+			AccessKey: minioAccessKey,
+			SecretKey: minioSecretKey,
+			Bucket:    minioBucket,
+			UseSSL:    minioUseSSL,
 		},
 	}
 

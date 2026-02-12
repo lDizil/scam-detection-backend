@@ -33,6 +33,7 @@ docker-compose up --build
 - Swagger UI: http://localhost:8080/swagger/index.html
 - ML Service: http://localhost:8000
 - ML Docs: http://localhost:8000/docs
+- MinIO Console: http://localhost:9001 (login: `minioadmin` / `minioadmin123`)
 
 ### Первый запуск
 
@@ -110,12 +111,20 @@ curl http://localhost:8000/health
 - Управление сессиями
 - Refresh токены
 
+**Storage (MinIO):**
+
+- S3-совместимое хранилище для файлов
+- Bucket: `scam-images`
+- Публичные URL для загруженных изображений и видео
+- Web консоль: http://localhost:9001
+
 ## Технологии
 
 **Backend:**
 
 - Go 1.23 + Gin
 - PostgreSQL 16
+- MinIO (S3-compatible storage)
 - JWT (HttpOnly cookies)
 - Argon2 (хеширование паролей)
 - Swagger UI
@@ -216,6 +225,19 @@ curl -X POST http://localhost:8080/api/v1/analysis/text \
 #   },
 #   "processing_time": 0.234
 # }
+
+# Анализ изображения (файл загружается в MinIO)
+curl -X POST http://localhost:8080/api/v1/analysis/image \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -F "image=@screenshot.png"
+
+# Response включает URL файла в MinIO:
+# {
+#   "check_id": 123,
+#   "extracted_text": "Поздравляем! Вы выиграли iPhone",
+#   "prediction": { "is_scam": true, "confidence": 0.92 },
+#   "file_url": "http://localhost:9000/scam-images/1739297856_screenshot.png"
+# }
 ```
 
 ## Переменные окружения
@@ -235,6 +257,12 @@ SERVER_MODE=debug
 JWT_SECRET=your-secret-key
 JWT_ACCESS_DURATION=1h
 JWT_REFRESH_DURATION=168h
+
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin123
+MINIO_BUCKET=scam-images
+MINIO_USE_SSL=false
 
 # URL ML сервиса
 ML_SERVICE_URL=http://localhost:8000
