@@ -77,7 +77,7 @@ func (h *SEOHandler) Sitemap(c *gin.Context) {
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
-</urlset>`, 
+</urlset>`,
 		h.baseURL, now,
 		h.baseURL, now,
 		h.baseURL, now,
@@ -145,16 +145,16 @@ Crawl-delay: 10
 // @Router       /api/v1/structured-data [get]
 func (h *SEOHandler) StructuredData(c *gin.Context) {
 	jsonLD := map[string]interface{}{
-		"@context": "https://schema.org",
-		"@type":    "WebApplication",
-		"name":     "Scam Detection System",
-		"description": "AI-powered scam and phishing detection service. Analyze texts, URLs, images, and videos for fraudulent content.",
-		"url":      h.baseURL,
+		"@context":            "https://schema.org",
+		"@type":               "WebApplication",
+		"name":                "Scam Detection System",
+		"description":         "AI-powered scam and phishing detection service. Analyze texts, URLs, images, and videos for fraudulent content.",
+		"url":                 h.baseURL,
 		"applicationCategory": "SecurityApplication",
-		"operatingSystem": "Web Browser",
+		"operatingSystem":     "Web Browser",
 		"offers": map[string]interface{}{
-			"@type": "Offer",
-			"price": "0",
+			"@type":         "Offer",
+			"price":         "0",
 			"priceCurrency": "USD",
 		},
 		"featureList": []string{
@@ -169,10 +169,10 @@ func (h *SEOHandler) StructuredData(c *gin.Context) {
 			"@type": "Organization",
 			"name":  "Scam Detection Team",
 		},
-		"datePublished": "2026-01-01",
-		"inLanguage": []string{"en", "ru"},
+		"datePublished":       "2026-01-01",
+		"inLanguage":          []string{"en", "ru"},
 		"browserRequirements": "Requires JavaScript. Requires HTML5.",
-		"screenshot": h.baseURL + "/static/screenshot.png",
+		"screenshot":          h.baseURL + "/static/screenshot.png",
 		"aggregateRating": map[string]interface{}{
 			"@type":       "AggregateRating",
 			"ratingValue": "4.8",
@@ -194,21 +194,21 @@ func (h *SEOHandler) StructuredData(c *gin.Context) {
 // @Router       /api/v1/health/structured-data [get]
 func (h *SEOHandler) HealthStructuredData(c *gin.Context) {
 	jsonLD := map[string]interface{}{
-		"@context": "https://schema.org",
-		"@type":    "APIReference",
-		"name":     "ML Service Health Check API",
-		"description": "Check the health status and availability of the machine learning service",
-		"url":      h.baseURL + "/api/v1/analysis/health",
+		"@context":         "https://schema.org",
+		"@type":            "APIReference",
+		"name":             "ML Service Health Check API",
+		"description":      "Check the health status and availability of the machine learning service",
+		"url":              h.baseURL + "/api/v1/analysis/health",
 		"programmingModel": "REST",
-		"documentation": h.baseURL + "/swagger/index.html#/analysis/get_analysis_health",
-		"termsOfService": h.baseURL + "/terms",
-		"version": "1.0",
+		"documentation":    h.baseURL + "/swagger/index.html#/analysis/get_analysis_health",
+		"termsOfService":   h.baseURL + "/terms",
+		"version":          "1.0",
 		"provider": map[string]interface{}{
 			"@type": "Organization",
 			"name":  "Scam Detection API",
 		},
 		"executableLibraryName": "Scam Detection ML Service",
-		"applicationCategory": "DeveloperApplication",
+		"applicationCategory":   "DeveloperApplication",
 	}
 
 	c.JSON(http.StatusOK, jsonLD)

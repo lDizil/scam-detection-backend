@@ -16,6 +16,12 @@ const (
 
 func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Пропускаем OPTIONS запросы (CORS preflight)
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
 		accessToken, err := c.Cookie("access_token")
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "токен не найден"})
@@ -46,6 +52,12 @@ func GetUserID(c *gin.Context) (uint, bool) {
 
 func RequireRole(userService services.UserService, allowedRoles ...models.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Пропускаем OPTIONS запросы (CORS preflight)
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
 		userID, exists := GetUserID(c)
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не аутентифицирован"})
