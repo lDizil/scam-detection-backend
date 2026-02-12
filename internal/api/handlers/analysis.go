@@ -563,6 +563,7 @@ func (h *AnalysisHandler) AnalyzeImage(c *gin.Context) {
 	imageURL, err := h.minioClient.UploadFile(
 		c.Request.Context(),
 		bytes.NewReader(imageData),
+		"images",
 		file.Filename,
 		contentType,
 		file.Size,
@@ -677,7 +678,6 @@ func (h *AnalysisHandler) AnalyzeVideo(c *gin.Context) {
 		return
 	}
 
-	// Лимит 50MB
 	if file.Size > 50*1024*1024 {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "File size exceeds 50MB limit"})
 		return
@@ -711,6 +711,7 @@ func (h *AnalysisHandler) AnalyzeVideo(c *gin.Context) {
 	videoURL, err := h.minioClient.UploadFile(
 		c.Request.Context(),
 		bytes.NewReader(videoData),
+		"videos",
 		file.Filename,
 		contentType,
 		file.Size,
@@ -806,6 +807,42 @@ func mapVerdictToDangerLevel(verdict string) string {
 	default:
 		return "unknown"
 	}
+}
+
+// GetFile godoc
+// @Summary      Получить файл из хранилища
+// @Description  Проксирует файлы из MinIO (изображения, видео)
+// @Tags         files
+// @Produce      octet-stream
+// @Param        filepath path string true "Путь к файлу в хранилище"
+// @Success      200 {file} binary "Файл"
+// @Failure      404 {object} ErrorResponse "Файл не найден"
+// @Failure      500 {object} ErrorResponse "Ошибка сервера"
+// @Router       /files/{filepath} [get]
+func (h *AnalysisHandler) GetFile(c *gin.Context) {
+	objectPath := c.Param("filepath")
+	if objectPath == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "File path is required"})
+		return
+	}
+
+	// Убираем ведущий слеш если есть
+	if objectPath[0] == '/' {
+		objectPath = objectPath[1:]
+	}
+
+	obj, info, err := h.minioClient.GetFile(c.Request.Context(), objectPath)
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "File not found"})
+		return
+	}
+	defer obj.Close()
+
+	c.Header("Content-Type", info.ContentType)
+	c.Header("Content-Length", fmt.Sprintf("%d", info.Size))
+	c.Header("Cache-Control", "public, max-age=86400")
+
+	c.DataFromReader(http.StatusOK, info.Size, info.ContentType, obj, nil)
 }
 
 // GetAllChecks godoc

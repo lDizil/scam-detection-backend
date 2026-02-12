@@ -81,11 +81,11 @@ func (m *MinIOClient) ensureBucket(ctx context.Context) error {
 	return nil
 }
 
-func (m *MinIOClient) UploadFile(ctx context.Context, reader io.Reader, filename string, contentType string, fileSize int64) (string, error) {
+func (m *MinIOClient) UploadFile(ctx context.Context, reader io.Reader, folder string, filename string, contentType string, fileSize int64) (string, error) {
 	timestamp := time.Now().Unix()
 	ext := filepath.Ext(filename)
 	baseName := filename[:len(filename)-len(ext)]
-	objectName := fmt.Sprintf("%d_%s%s", timestamp, baseName, ext)
+	objectName := fmt.Sprintf("%s/%d_%s%s", folder, timestamp, baseName, ext)
 
 	_, err := m.client.PutObject(ctx, m.bucketName, objectName, reader, fileSize, minio.PutObjectOptions{
 		ContentType: contentType,
@@ -94,18 +94,28 @@ func (m *MinIOClient) UploadFile(ctx context.Context, reader io.Reader, filename
 		return "", fmt.Errorf("failed to upload file to MinIO: %w", err)
 	}
 
-	protocol := "http"
-	if m.useSSL {
-		protocol = "https"
-	}
-	url := fmt.Sprintf("%s://%s/%s/%s", protocol, m.endpoint, m.bucketName, objectName)
-
-	return url, nil
+	return objectName, nil
 }
 
-func (m *MinIOClient) DeleteFile(ctx context.Context, fileURL string) error {
-	// Формат: http://localhost:9000/scam-images/1234567890_file.jpg
-	objectName := filepath.Base(fileURL)
+func (m *MinIOClient) GetFile(ctx context.Context, objectName string) (*minio.Object, *minio.ObjectInfo, error) {
+	obj, err := m.client.GetObject(ctx, m.bucketName, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get file from MinIO: %w", err)
+	}
+
+	info, err := obj.Stat()
+	if err != nil {
+		obj.Close()
+		return nil, nil, fmt.Errorf("failed to stat file from MinIO: %w", err)
+	}
+
+	return obj, &info, nil
+}
+
+func (m *MinIOClient) DeleteFile(ctx context.Context, objectName string) error {
+	if objectName == "" {
+		return nil
+	}
 
 	err := m.client.RemoveObject(ctx, m.bucketName, objectName, minio.RemoveObjectOptions{})
 	if err != nil {
