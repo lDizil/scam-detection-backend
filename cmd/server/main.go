@@ -84,6 +84,10 @@ func main() {
 		MaxAge:           12 * 3600,
 	}))
 
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "healthy"})
+	})
+
 	routes.SetupRoutes(r, db, authService, userService, cfg)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
