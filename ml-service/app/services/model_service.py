@@ -1,7 +1,7 @@
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from typing import Dict, List, Tuple
 import logging
+
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from app.core.config import settings
 
@@ -60,7 +60,7 @@ class ModelService:
             self.model_loaded = False
             raise
 
-    def _preprocess(self, text: str) -> Dict:
+    def _preprocess(self, text: str) -> dict:
         inputs = self.tokenizer(
             text,
             padding=True,
@@ -72,7 +72,7 @@ class ModelService:
         inputs = {key: val.to(self.device) for key, val in inputs.items()}
         return inputs
 
-    def _postprocess(self, outputs) -> Tuple[str, float, bool]:
+    def _postprocess(self, outputs) -> tuple[str, float, bool]:
         logits = outputs.logits
         probabilities = torch.nn.functional.softmax(logits, dim=-1)
         predicted_class = torch.argmax(probabilities, dim=-1).item()
@@ -83,7 +83,7 @@ class ModelService:
 
         return label, confidence, is_scam
 
-    async def predict(self, text: str) -> Dict:
+    async def predict(self, text: str) -> dict:
         if not self.model_loaded:
             raise RuntimeError("Model not loaded")
 
@@ -101,7 +101,7 @@ class ModelService:
             logger.error(f"Ошибка при предсказании: {e}")
             raise
 
-    async def predict_batch(self, texts: List[str]) -> List[Dict]:
+    async def predict_batch(self, texts: list[str]) -> list[dict]:
         if not self.model_loaded:
             raise RuntimeError("Model not loaded")
 
@@ -128,13 +128,9 @@ class ModelService:
                 predicted_class = predicted_classes[i].item()
                 confidence = probabilities[i][predicted_class].item()
                 label = "phishing" if predicted_class == 1 else "legitimate"
-                is_scam = (
-                    predicted_class == 1 and confidence >= settings.PHISHING_THRESHOLD
-                )
+                is_scam = predicted_class == 1 and confidence >= settings.PHISHING_THRESHOLD
 
-                results.append(
-                    {"label": label, "confidence": confidence, "is_scam": is_scam}
-                )
+                results.append({"label": label, "confidence": confidence, "is_scam": is_scam})
 
             return results
 

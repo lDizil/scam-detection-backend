@@ -1,17 +1,17 @@
-import easyocr
-import logging
-from typing import Optional
-from PIL import Image
 import io
-import numpy as np
+import logging
 import re
+
+import easyocr
+import numpy as np
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
 
 class ImageService:
     def __init__(self):
-        self.reader: Optional[easyocr.Reader] = None
+        self.reader: easyocr.Reader | None = None
         self.loaded = False
 
     async def load_reader(self):
@@ -28,9 +28,7 @@ class ImageService:
     def _clean_ocr_text(self, text: str) -> str:
 
         text = re.sub(r"\[\d{1,2}:\d{2}(?::\d{2})?\]", "", text)
-        text = re.sub(
-            r"(?:^|\n)\d{3}\s\d{3}-\d{2}-\d{2}:\s*", " ", text, flags=re.MULTILINE
-        )
+        text = re.sub(r"(?:^|\n)\d{3}\s\d{3}-\d{2}-\d{2}:\s*", " ", text, flags=re.MULTILINE)
 
         text = re.sub(r"\s+", " ", text)
 

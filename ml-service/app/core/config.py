@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -13,7 +12,7 @@ class Settings(BaseSettings):
 
     PHISHING_THRESHOLD: float = 0.7
 
-    CUSTOM_MODEL_PATH: Optional[str] = None
+    CUSTOM_MODEL_PATH: str | None = None
 
     class Config:
         env_file = ".env"

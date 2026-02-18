@@ -1,12 +1,13 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-import logging
 
-from app.core.config import settings
 from app.api.endpoints import router
-from app.services.model_service import model_service
+from app.core.config import settings
 from app.services.image_service import image_service
+from app.services.model_service import model_service
 from app.services.video_service import video_service
 
 logging.basicConfig(
@@ -37,25 +38,25 @@ app = FastAPI(
     version=settings.VERSION,
     description="""
     ## ML сервис для детекции мошеннических текстов
-    
+
     ### Архитектура модели:
     - **Базовая модель**: BERT (Bidirectional Encoder Representations from Transformers)
     - **Дообученная модель**: ealvaradob/bert-finetuned-phishing
     - **Задача**: Бинарная классификация (phishing vs legitimate)
-    
+
     ### Что детектирует:
-     Фишинговые сообщения от поддельных банков и сервисов  
-     Срочные запросы личных данных (пароли, карты, коды)  
-     Подозрительные ссылки и призывы к действию  
-     Манипуляции через страх или жадность  
-     Запросы на перевод денег под различными предлогами  
-    
+     Фишинговые сообщения от поддельных банков и сервисов
+     Срочные запросы личных данных (пароли, карты, коды)
+     Подозрительные ссылки и призывы к действию
+     Манипуляции через страх или жадность
+     Запросы на перевод денег под различными предлогами
+
     ### Endpoints:
     - `GET /health` - Проверка статуса сервиса
     - `POST /api/v1/analyze/text` - Анализ одного текста
     - `POST /api/v1/analyze/batch` - Пакетный анализ текстов
     - `POST /api/v1/analyze/image` - Анализ изображения (OCR + детекция)
-    
+
     ### Возможности дообучения:
     Сервис поддерживает загрузку кастомных дообученных моделей через переменную окружения `CUSTOM_MODEL_PATH`
     """,
@@ -91,9 +92,7 @@ async def root():
 @app.get("/health", tags=["Health"])
 async def health():
     return {
-        "status": "healthy"
-        if model_service.model_loaded and image_service.loaded
-        else "unhealthy",
+        "status": "healthy" if model_service.model_loaded and image_service.loaded else "unhealthy",
         "model_loaded": model_service.model_loaded,
         "ocr_loaded": image_service.loaded,
         "model_name": settings.CUSTOM_MODEL_PATH or settings.MODEL_NAME,

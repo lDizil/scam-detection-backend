@@ -44,17 +44,22 @@ test-ml: ## Запустить тесты ML service
 	cd ml-service && pytest -v --cov=app
 
 lint-backend: ## Запустить линтер для backend
-	golangci-lint run --timeout=5m
+	go vet ./...
+	gofmt -l .
+	staticcheck ./...
 
 lint-ml: ## Запустить линтер для ML service
-	cd ml-service && flake8 app/ --max-line-length=120 && pylint app/
+	cd ml-service && python -m ruff check app/
 
 format-backend: ## Отформатировать код backend
-	gofmt -s -w .
-	goimports -w .
+	gofmt -w .
 
 format-ml: ## Отформатировать код ML service
-	cd ml-service && black app/
+	cd ml-service && python -m ruff format app/
+
+lint: lint-backend lint-ml ## Запустить все линтеры
+
+format: format-backend format-ml ## Отформатировать весь код
 
 dev: ## Запустить в режиме разработки
 	docker-compose up

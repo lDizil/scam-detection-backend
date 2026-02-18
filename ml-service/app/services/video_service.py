@@ -1,9 +1,9 @@
-import whisper
 import logging
-import tempfile
 import os
-from typing import Optional
+import tempfile
+
 import ffmpeg
+import whisper
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ MAX_VIDEO_DURATION_SEC = 300
 
 class VideoService:
     def __init__(self):
-        self.model: Optional[whisper.Whisper] = None
+        self.model: whisper.Whisper | None = None
         self.loaded = False
 
     async def load_model(self):
@@ -66,9 +66,7 @@ class VideoService:
 
         size_mb = len(video_bytes) / (1024 * 1024)
         if size_mb > MAX_VIDEO_SIZE_MB:
-            raise ValueError(
-                f"Размер видео {size_mb:.1f}MB превышает лимит {MAX_VIDEO_SIZE_MB}MB"
-            )
+            raise ValueError(f"Размер видео {size_mb:.1f}MB превышает лимит {MAX_VIDEO_SIZE_MB}MB")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             video_path = os.path.join(temp_dir, filename)

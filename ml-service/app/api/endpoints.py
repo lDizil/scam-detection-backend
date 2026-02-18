@@ -1,22 +1,23 @@
-from fastapi import APIRouter, HTTPException, status, File, UploadFile
-from time import time
 import logging
+from time import time
 
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
+
+from app.core.config import settings
 from app.models.schemas import (
-    TextAnalysisRequest,
-    TextAnalysisResponse,
     BatchTextAnalysisRequest,
     BatchTextAnalysisResponse,
-    HealthResponse,
     ErrorResponse,
-    PredictionResult,
+    HealthResponse,
     ImageAnalysisResponse,
+    PredictionResult,
+    TextAnalysisRequest,
+    TextAnalysisResponse,
     VideoAnalysisResponse,
 )
-from app.services.model_service import model_service
 from app.services.image_service import image_service
+from app.services.model_service import model_service
 from app.services.video_service import video_service
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +51,14 @@ async def health_check():
     summary="Анализ текста на мошенничество",
     description="""
     Анализирует текст и определяет, является ли он фишинговым/мошенническим.
-    
+
     **Что детектит модель:**
     - Фишинговые сообщения (поддельные банки, сервисы)
     - Срочные запросы личных данных (пароли, номера карт)
     - Подозрительные ссылки и призывы к действию
     - Манипуляции через страх ("аккаунт заблокирован") или жадность ("вы выиграли приз")
     - Запросы на перевод денег под предлогами
-    
+
     **Примеры мошеннических текстов:**
     - "Срочно! Ваш аккаунт заблокирован. Перейдите по ссылке для разблокировки"
     - "Вы выиграли 1000000 рублей! Переведите 500р для получения приза"
@@ -89,9 +90,7 @@ async def analyze_text(request: TextAnalysisRequest):
 
     except Exception as e:
         logger.error(f"Ошибка при анализе текста: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post(
@@ -116,8 +115,7 @@ async def analyze_batch(request: BatchTextAnalysisRequest):
         processing_time = time() - start_time
 
         logger.info(
-            f"Пакетный анализ завершен: {len(predictions)} текстов, "
-            f"time={processing_time:.3f}s"
+            f"Пакетный анализ завершен: {len(predictions)} текстов, time={processing_time:.3f}s"
         )
 
         return BatchTextAnalysisResponse(
@@ -128,9 +126,7 @@ async def analyze_batch(request: BatchTextAnalysisRequest):
 
     except Exception as e:
         logger.error(f"Ошибка при пакетном анализе: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post(
@@ -144,14 +140,14 @@ async def analyze_batch(request: BatchTextAnalysisRequest):
     summary="Анализ изображения на мошенничество",
     description="""
     Извлекает текст из изображения (OCR) и анализирует его на предмет мошенничества.
-    
+
     **Что детектит:**
     - Скриншоты поддельных банковских уведомлений
     - Фейковые QR-коды с просьбами оплаты
     - Объявления о "выигрышах" с реквизитами
     - Мошеннические рекламные баннеры
     - Фишинговые формы ввода данных
-    
+
     **Поддерживаемые форматы:** JPG, JPEG, PNG, BMP, TIFF
     """,
 )
@@ -181,9 +177,7 @@ async def analyze_image(file: UploadFile = File(...)):
             return ImageAnalysisResponse(
                 success=True,
                 extracted_text="",
-                prediction=PredictionResult(
-                    label="legitimate", confidence=0.0, is_scam=False
-                ),
+                prediction=PredictionResult(label="legitimate", confidence=0.0, is_scam=False),
                 processing_time=time() - start_time,
                 message="Текст не обнаружен на изображении",
             )
@@ -208,9 +202,7 @@ async def analyze_image(file: UploadFile = File(...)):
 
     except Exception as e:
         logger.error(f"Ошибка при анализе изображения: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post(
@@ -227,17 +219,17 @@ async def analyze_image(file: UploadFile = File(...)):
     summary="Анализ видео на мошенничество",
     description="""
     Извлекает аудио из видео, транскрибирует речь через Whisper и анализирует текст.
-    
+
     **Что детектит:**
     - Видеозвонки от "службы безопасности банка"
     - Записи с просьбами перевести деньги
     - Видеоинструкции по "выводу выигрыша"
     - Голосовые сообщения с манипуляциями
-    
+
     **Ограничения:**
     - Максимальный размер: 50MB
     - Максимальная длительность: 5 минут
-    
+
     **Поддерживаемые форматы:** MP4, AVI, MOV, MKV, WEBM
     """,
 )
@@ -259,7 +251,7 @@ async def analyze_video(file: UploadFile = File(...)):
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Неподдерживаемый формат. Поддерживаются: MP4, AVI, MOV, MKV, WEBM",
+            detail="Неподдерживаемый формат. Поддерживаются: MP4, AVI, MOV, MKV, WEBM",
         )
 
     try:
@@ -271,9 +263,7 @@ async def analyze_video(file: UploadFile = File(...)):
             f"Транскрибация видео {file.filename} ({len(video_bytes) / 1024 / 1024:.1f}MB)..."
         )
 
-        transcription_result = await video_service.transcribe_video(
-            video_bytes, file.filename
-        )
+        transcription_result = await video_service.transcribe_video(video_bytes, file.filename)
         transcription = transcription_result["transcription"]
         duration = transcription_result["duration"]
         language = transcription_result["language"]
@@ -284,9 +274,7 @@ async def analyze_video(file: UploadFile = File(...)):
                 transcription="",
                 duration=duration,
                 language=language,
-                prediction=PredictionResult(
-                    label="legitimate", confidence=0.0, is_scam=False
-                ),
+                prediction=PredictionResult(label="legitimate", confidence=0.0, is_scam=False),
                 processing_time=time() - start_time,
                 message="Речь не обнаружена в видео",
             )
@@ -316,6 +304,4 @@ async def analyze_video(file: UploadFile = File(...)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error(f"Ошибка при анализе видео: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

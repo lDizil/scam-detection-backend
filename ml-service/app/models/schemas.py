@@ -1,11 +1,8 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
 
 
 class TextAnalysisRequest(BaseModel):
-    text: str = Field(
-        ..., min_length=1, max_length=5000, description="Текст для анализа"
-    )
+    text: str = Field(..., min_length=1, max_length=5000, description="Текст для анализа")
 
     class Config:
         json_schema_extra = {
@@ -21,9 +18,7 @@ class PredictionResult(BaseModel):
     is_scam: bool = Field(..., description="Является ли текст мошенническим")
 
     class Config:
-        json_schema_extra = {
-            "example": {"label": "phishing", "confidence": 0.95, "is_scam": True}
-        }
+        json_schema_extra = {"example": {"label": "phishing", "confidence": 0.95, "is_scam": True}}
 
 
 class TextAnalysisResponse(BaseModel):
@@ -46,7 +41,7 @@ class TextAnalysisResponse(BaseModel):
 
 
 class BatchTextAnalysisRequest(BaseModel):
-    texts: List[str] = Field(
+    texts: list[str] = Field(
         ..., min_length=1, max_length=100, description="Список текстов для анализа"
     )
 
@@ -63,7 +58,7 @@ class BatchTextAnalysisRequest(BaseModel):
 
 class BatchTextAnalysisResponse(BaseModel):
     success: bool = Field(..., description="Успешность операции")
-    predictions: List[PredictionResult] = Field(..., description="Список результатов")
+    predictions: list[PredictionResult] = Field(..., description="Список результатов")
     processing_time: float = Field(..., description="Общее время обработки")
 
     class Config:
@@ -109,7 +104,7 @@ class ImageAnalysisResponse(BaseModel):
     extracted_text: str = Field(..., description="Извлеченный текст из изображения")
     prediction: PredictionResult = Field(..., description="Результат анализа текста")
     processing_time: float = Field(..., description="Время обработки в секундах")
-    message: Optional[str] = Field(None, description="Дополнительное сообщение")
+    message: str | None = Field(None, description="Дополнительное сообщение")
 
     class Config:
         json_schema_extra = {
@@ -133,7 +128,7 @@ class VideoAnalysisResponse(BaseModel):
     language: str = Field(..., description="Определенный язык аудио")
     prediction: PredictionResult = Field(..., description="Результат анализа текста")
     processing_time: float = Field(..., description="Время обработки в секундах")
-    message: Optional[str] = Field(None, description="Дополнительное сообщение")
+    message: str | None = Field(None, description="Дополнительное сообщение")
 
     class Config:
         json_schema_extra = {
