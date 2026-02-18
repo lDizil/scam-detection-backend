@@ -55,7 +55,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 func Load() *Config {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	host := getEnv("DB_HOST", "localhost")
 	port := getEnv("DB_PORT", "5432")

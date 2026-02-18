@@ -110,7 +110,7 @@ func (h *AnalysisHandler) AnalyzeText(c *gin.Context) {
 	processingTime := int(time.Since(startTime).Milliseconds())
 
 	if err != nil {
-		h.checkRepo.UpdateCheckStatus(check.ID, "failed", 0, "", processingTime)
+		_ = h.checkRepo.UpdateCheckStatus(check.ID, "failed", 0, "", processingTime)
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to analyze text: " + err.Error()})
 		return
 	}
@@ -134,10 +134,14 @@ func (h *AnalysisHandler) AnalyzeText(c *gin.Context) {
 		return
 	}
 
-	detailValue, _ := json.Marshal(map[string]interface{}{
+	detailValue, err := json.Marshal(map[string]interface{}{
 		"label":   result.Prediction.Label,
 		"is_scam": result.Prediction.IsScam,
 	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to marshal detail: " + err.Error()})
+		return
+	}
 
 	detail := &models.CheckDetail{
 		CheckID:         check.ID,
@@ -241,10 +245,13 @@ func (h *AnalysisHandler) AnalyzeBatch(c *gin.Context) {
 
 		checkIDs = append(checkIDs, check.ID)
 
-		detailValue, _ := json.Marshal(map[string]interface{}{
+		detailValue, err := json.Marshal(map[string]interface{}{
 			"label":   pred.Label,
 			"is_scam": pred.IsScam,
 		})
+		if err != nil {
+			continue
+		}
 
 		detail := &models.CheckDetail{
 			CheckID:         check.ID,

@@ -47,9 +47,10 @@ func (s *URLCheckService) CheckURL(ctx context.Context, rawURL string) (*URLChec
 	}
 
 	if cached, ok := s.cache.Load(rawURL); ok {
-		result := cached.(URLCheckResult)
-		if time.Since(result.CheckedAt) < s.cacheTTL {
-			return &result, nil
+		if result, ok := cached.(URLCheckResult); ok {
+			if time.Since(result.CheckedAt) < s.cacheTTL {
+				return &result, nil
+			}
 		}
 		s.cache.Delete(rawURL)
 	}
@@ -289,7 +290,7 @@ func (s *URLCheckService) checkURLHaus(ctx context.Context, urlToCheck string) (
 	if err != nil {
 		return false, "", nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 401 {
 		return false, "", nil

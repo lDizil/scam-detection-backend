@@ -105,7 +105,7 @@ func (m *MinIOClient) GetFile(ctx context.Context, objectName string) (*minio.Ob
 
 	info, err := obj.Stat()
 	if err != nil {
-		obj.Close()
+		_ = obj.Close()
 		return nil, nil, fmt.Errorf("failed to stat file from MinIO: %w", err)
 	}
 

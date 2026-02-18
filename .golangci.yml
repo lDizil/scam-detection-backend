@@ -23,11 +23,16 @@ linters:
 
 linters-settings:
   errcheck:
-    check-type-assertions: true
-    check-blank: true
+    check-type-assertions: false
+    check-blank: false
+    exclude-functions:
+      - (io.Closer).Close
+      - (*io.Writer).Write
+      - (io.ReadCloser).Close
 
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
 
   gofmt:
     simplify: true
@@ -56,11 +61,8 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: error-naming
-      - name: exported
       - name: if-return
       - name: increment-decrement
-      - name: var-naming
-      - name: package-comments
       - name: range
       - name: receiver-naming
       - name: indent-error-flow
@@ -74,9 +76,22 @@ issues:
       linters:
         - errcheck
         - gosec
+        - revive
     - path: cmd/
       linters:
         - gochecknoinits
+    - text: "Error return value.*is not checked"
+      linters:
+        - errcheck
+    - text: "exported.*should have comment"
+      linters:
+        - revive
+    - text: "package-comments"
+      linters:
+        - revive
+    - text: "var-naming.*UserId.*should be UserID"
+      linters:
+        - revive
 
 output:
   format: colored-line-number

@@ -26,14 +26,14 @@ func NewAuthService(userRepo repository.UserRepository, sessionService SessionSe
 }
 
 func (s *AuthService) Register(ctx context.Context, req *models.CreateUserRequest) (*models.User, *models.TokenPair, error) {
-	existing, _ := s.userRepo.GetByUsername(req.Username)
-	if existing != nil {
+	existing, err := s.userRepo.GetByUsername(req.Username)
+	if err == nil && existing != nil {
 		return nil, nil, ErrUserAlreadyExists
 	}
 
 	if req.Email != nil {
-		existing, _ = s.userRepo.GetByEmail(*req.Email)
-		if existing != nil {
+		existing, err = s.userRepo.GetByEmail(*req.Email)
+		if err == nil && existing != nil {
 			return nil, nil, ErrUserAlreadyExists
 		}
 	}
@@ -78,7 +78,7 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 		return nil, nil, ErrInvalidCredentials
 	}
 
-	s.sessionService.CleanupExpiredSessions(ctx)
+	_, _ = s.sessionService.CleanupExpiredSessions(ctx)
 
 	tokens, err := s.sessionService.GenerateSession(ctx, user.ID)
 	if err != nil {

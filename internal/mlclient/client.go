@@ -93,7 +93,7 @@ func (c *MLClient) HealthCheck() (*HealthResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to check ML service health: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -123,7 +123,7 @@ func (c *MLClient) AnalyzeText(text string) (*TextAnalysisResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request to ML service: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -153,7 +153,7 @@ func (c *MLClient) AnalyzeBatch(texts []string) (*BatchTextAnalysisResponse, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request to ML service: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -184,11 +184,11 @@ func (c *MLClient) AnalyzeImage(imageData []byte, filename string) (*ImageAnalys
 	}
 
 	boundary := "----WebKitFormBoundary7MA4YWxkTrZu0gW"
-	writer.Write([]byte(fmt.Sprintf("--%s\r\n", boundary)))
-	writer.Write([]byte(fmt.Sprintf("Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n", filename)))
-	writer.Write([]byte(fmt.Sprintf("Content-Type: %s\r\n\r\n", contentType)))
-	writer.Write(imageData)
-	writer.Write([]byte(fmt.Sprintf("\r\n--%s--\r\n", boundary)))
+	_, _ = writer.Write([]byte(fmt.Sprintf("--%s\r\n", boundary)))
+	_, _ = writer.Write([]byte(fmt.Sprintf("Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n", filename)))
+	_, _ = writer.Write([]byte(fmt.Sprintf("Content-Type: %s\r\n\r\n", contentType)))
+	_, _ = writer.Write(imageData)
+	_, _ = writer.Write([]byte(fmt.Sprintf("\r\n--%s--\r\n", boundary)))
 
 	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/analyze/image", body)
 	if err != nil {
@@ -201,7 +201,7 @@ func (c *MLClient) AnalyzeImage(imageData []byte, filename string) (*ImageAnalys
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request to ML service: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -236,11 +236,11 @@ func (c *MLClient) AnalyzeVideo(videoData []byte, filename string) (*VideoAnalys
 	}
 
 	boundary := "----WebKitFormBoundary7MA4YWxkTrZu0gW"
-	writer.Write([]byte(fmt.Sprintf("--%s\r\n", boundary)))
-	writer.Write([]byte(fmt.Sprintf("Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n", filename)))
-	writer.Write([]byte(fmt.Sprintf("Content-Type: %s\r\n\r\n", contentType)))
-	writer.Write(videoData)
-	writer.Write([]byte(fmt.Sprintf("\r\n--%s--\r\n", boundary)))
+	_, _ = writer.Write([]byte(fmt.Sprintf("--%s\r\n", boundary)))
+	_, _ = writer.Write([]byte(fmt.Sprintf("Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n", filename)))
+	_, _ = writer.Write([]byte(fmt.Sprintf("Content-Type: %s\r\n\r\n", contentType)))
+	_, _ = writer.Write(videoData)
+	_, _ = writer.Write([]byte(fmt.Sprintf("\r\n--%s--\r\n", boundary)))
 
 	req, err := http.NewRequest("POST", c.baseURL+"/api/v1/analyze/video", body)
 	if err != nil {
@@ -253,7 +253,7 @@ func (c *MLClient) AnalyzeVideo(videoData []byte, filename string) (*VideoAnalys
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request to ML service: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
