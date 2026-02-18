@@ -1,3 +1,5 @@
+//go:generate mockgen -source=interfaces.go -destination=mocks/mock_repository.go -package=mocks
+
 package repository
 
 import (
@@ -8,7 +10,6 @@ import (
 
 type UserRepository interface {
 	Create(user *models.User) error
-	CreateUser(user *models.User) error
 	GetByID(id uint) (*models.User, error)
 	GetByUsername(username string) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)

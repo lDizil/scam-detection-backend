@@ -65,7 +65,7 @@ func RequireRole(userService services.UserService, allowedRoles ...models.Role) 
 			return
 		}
 
-		user, err := userService.GetUserByID(userID)
+		user, err := userService.GetByID(userID)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не найден"})
 			c.Abort()

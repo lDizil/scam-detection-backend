@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"scam-detection-backend/internal/models"
 	"scam-detection-backend/internal/services"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type AdminHandler struct {
@@ -111,7 +113,7 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetUserByID(uint(userID))
+	user, err := h.userService.GetByID(uint(userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User updated but failed to fetch"})
 		return
@@ -148,11 +150,15 @@ func (h *AdminHandler) ToggleUserStatus(c *gin.Context) {
 	}
 
 	if err := h.userService.ToggleUserActiveStatus(uint(userID), *req.IsActive); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user status"})
 		return
 	}
 
-	user, err := h.userService.GetUserByID(uint(userID))
+	user, err := h.userService.GetByID(uint(userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User updated but failed to fetch"})
 		return
@@ -181,7 +187,7 @@ func (h *AdminHandler) GetUserByID(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetUserByID(uint(userID))
+	user, err := h.userService.GetByID(uint(userID))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return

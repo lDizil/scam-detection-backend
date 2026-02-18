@@ -1,3 +1,5 @@
+//go:generate mockgen -source=interfaces.go -destination=mocks/mock_service.go -package=mocks
+
 package services
 
 import (
@@ -7,7 +9,6 @@ import (
 
 type UserService interface {
 	GetByID(id uint) (*models.User, error)
-	GetUserByID(id uint) (*models.User, error)
 	Update(id uint, data *models.UpdateUserRequest) error
 	Delete(id uint) error
 	GetAllUsers(limit, offset int) ([]models.User, int64, error)

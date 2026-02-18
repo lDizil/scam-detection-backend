@@ -16,7 +16,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) CreateUser(user *models.User) error {
+func (r *userRepository) Create(user *models.User) error {
 	if user == nil {
 		return gorm.ErrInvalidData
 	}
@@ -31,10 +31,6 @@ func (r *userRepository) CreateUser(user *models.User) error {
 	}
 
 	return nil
-}
-
-func (r *userRepository) Create(user *models.User) error {
-	return r.CreateUser(user)
 }
 
 func (r *userRepository) GetByID(id uint) (*models.User, error) {

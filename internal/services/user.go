@@ -20,10 +20,6 @@ func (s *userService) GetByID(id uint) (*models.User, error) {
 	return s.userRepo.GetByID(id)
 }
 
-func (s *userService) GetUserByID(id uint) (*models.User, error) {
-	return s.userRepo.GetByID(id)
-}
-
 func (s *userService) Update(id uint, data *models.UpdateUserRequest) error {
 	return s.userRepo.Update(id, data)
 }
