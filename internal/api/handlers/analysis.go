@@ -298,11 +298,17 @@ type CheckHistoryResponse struct {
 
 // GetCheckHistory godoc
 // @Summary      История проверок пользователя
-// @Description  Возвращает список всех проверок текущего пользователя с пагинацией
+// @Description  Возвращает список всех проверок текущего пользователя с пагинацией и фильтрацией
 // @Tags         analysis
 // @Produce      json
 // @Param        page query int false "Номер страницы" default(1)
 // @Param        limit query int false "Количество записей на странице" default(20)
+// @Param        check_type query string false "Тип проверки (text, image, video, url, batch)"
+// @Param        danger_level query string false "Уровень опасности (low, medium, high, critical)"
+// @Param        status query string false "Статус (processing, completed, failed)"
+// @Param        search query string false "Поиск по названию и содержимому"
+// @Param        date_from query string false "Дата от (RFC3339)"
+// @Param        date_to query string false "Дата до (RFC3339)"
 // @Success      200 {object} CheckHistoryResponse "Список проверок"
 // @Failure      401 {object} ErrorResponse "Не авторизован"
 // @Failure      500 {object} ErrorResponse "Ошибка БД"
@@ -331,7 +337,9 @@ func (h *AnalysisHandler) GetCheckHistory(c *gin.Context) {
 
 	offset := (page - 1) * limit
 
-	checks, total, err := h.checkRepo.GetChecksByUserID(userID, limit, offset)
+	filters := h.parseCheckFilters(c)
+
+	checks, total, err := h.checkRepo.GetChecksByUserID(userID, limit, offset, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to get check history: " + err.Error()})
 		return
@@ -354,6 +362,40 @@ func stringToInt(s string) (int, error) {
 		result = result*10 + int(ch-'0')
 	}
 	return result, nil
+}
+
+func (h *AnalysisHandler) parseCheckFilters(c *gin.Context) *repository.CheckFilters {
+	filters := &repository.CheckFilters{}
+
+	if checkType, exists := c.GetQuery("check_type"); exists && checkType != "" {
+		filters.CheckType = checkType
+	}
+
+	if dangerLevel, exists := c.GetQuery("danger_level"); exists && dangerLevel != "" {
+		filters.DangerLevel = dangerLevel
+	}
+
+	if status, exists := c.GetQuery("status"); exists && status != "" {
+		filters.Status = status
+	}
+
+	if search, exists := c.GetQuery("search"); exists && search != "" {
+		filters.Search = search
+	}
+
+	if dateFrom, exists := c.GetQuery("date_from"); exists && dateFrom != "" {
+		if t, err := time.Parse(time.RFC3339, dateFrom); err == nil {
+			filters.DateFrom = &t
+		}
+	}
+
+	if dateTo, exists := c.GetQuery("date_to"); exists && dateTo != "" {
+		if t, err := time.Parse(time.RFC3339, dateTo); err == nil {
+			filters.DateTo = &t
+		}
+	}
+
+	return filters
 }
 
 // DeleteCheck godoc
@@ -833,7 +875,6 @@ func (h *AnalysisHandler) GetFile(c *gin.Context) {
 		return
 	}
 
-	// Убираем ведущий слеш если есть
 	if objectPath[0] == '/' {
 		objectPath = objectPath[1:]
 	}
@@ -844,6 +885,12 @@ func (h *AnalysisHandler) GetFile(c *gin.Context) {
 		return
 	}
 	defer obj.Close()
+
+	// CORS заголовки для предотвращения ERR_BLOCKED_BY_ORB
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+	c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	c.Header("Cross-Origin-Resource-Policy", "cross-origin")
 
 	c.Header("Content-Type", info.ContentType)
 	c.Header("Content-Length", fmt.Sprintf("%d", info.Size))
@@ -860,6 +907,12 @@ func (h *AnalysisHandler) GetFile(c *gin.Context) {
 // @Produce      json
 // @Param        page query int false "Номер страницы" default(1)
 // @Param        limit query int false "Количество на странице" default(20)
+// @Param        check_type query string false "Тип проверки (text, image, video, url, batch)"
+// @Param        danger_level query string false "Уровень опасности (low, medium, high, critical)"
+// @Param        status query string false "Статус (processing, completed, failed)"
+// @Param        search query string false "Поиск по названию и содержимому"
+// @Param        date_from query string false "Дата от (RFC3339)"
+// @Param        date_to query string false "Дата до (RFC3339)"
 // @Success      200 {object} map[string]interface{}
 // @Failure      403 {object} ErrorResponse
 // @Failure      500 {object} ErrorResponse
@@ -885,7 +938,9 @@ func (h *AnalysisHandler) GetAllChecks(c *gin.Context) {
 
 	offset := (page - 1) * limit
 
-	checks, total, err := h.checkRepo.GetAllChecks(limit, offset)
+	filters := h.parseCheckFilters(c)
+
+	checks, total, err := h.checkRepo.GetAllChecks(limit, offset, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to fetch checks"})
 		return

@@ -79,14 +79,16 @@ func main() {
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "Cache-Control"},
-		ExposeHeaders:    []string{"Content-Length", "Set-Cookie"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Set-Cookie", "Cross-Origin-Resource-Policy"},
 		AllowCredentials: true,
 		MaxAge:           12 * 3600,
 	}))
 
-	r.GET("/health", func(c *gin.Context) {
+	healthHandler := func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "healthy"})
-	})
+	}
+	r.GET("/health", healthHandler)
+	r.HEAD("/health", healthHandler)
 
 	routes.SetupRoutes(r, db, authService, userService, cfg)
 

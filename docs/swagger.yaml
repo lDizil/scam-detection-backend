@@ -476,6 +476,30 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Тип проверки (text, image, video, url, batch)
+        in: query
+        name: check_type
+        type: string
+      - description: Уровень опасности (low, medium, high, critical)
+        in: query
+        name: danger_level
+        type: string
+      - description: Статус (processing, completed, failed)
+        in: query
+        name: status
+        type: string
+      - description: Поиск по названию и содержимому
+        in: query
+        name: search
+        type: string
+      - description: Дата от (RFC3339)
+        in: query
+        name: date_from
+        type: string
+      - description: Дата до (RFC3339)
+        in: query
+        name: date_to
+        type: string
       produces:
       - application/json
       responses:
@@ -576,6 +600,7 @@ paths:
   /analysis/history:
     get:
       description: Возвращает список всех проверок текущего пользователя с пагинацией
+        и фильтрацией
       parameters:
       - default: 1
         description: Номер страницы
@@ -587,6 +612,30 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Тип проверки (text, image, video, url, batch)
+        in: query
+        name: check_type
+        type: string
+      - description: Уровень опасности (low, medium, high, critical)
+        in: query
+        name: danger_level
+        type: string
+      - description: Статус (processing, completed, failed)
+        in: query
+        name: status
+        type: string
+      - description: Поиск по названию и содержимому
+        in: query
+        name: search
+        type: string
+      - description: Дата от (RFC3339)
+        in: query
+        name: date_from
+        type: string
+      - description: Дата до (RFC3339)
+        in: query
+        name: date_to
+        type: string
       produces:
       - application/json
       responses:
@@ -807,6 +856,34 @@ paths:
       summary: Анализ видео на мошенничество
       tags:
       - analysis
+  /api/v1/health/structured-data:
+    get:
+      description: Возвращает JSON-LD разметку типа APIReference для health endpoint
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON-LD for API health check
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Структурированные данные для API здоровья
+      tags:
+      - seo
+  /api/v1/structured-data:
+    get:
+      description: Возвращает JSON-LD разметку для веб-приложения по детекции мошенничества
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON-LD structured data
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Структурированные данные (JSON-LD)
+      tags:
+      - seo
   /auth/login:
     post:
       consumes:
@@ -899,6 +976,33 @@ paths:
       summary: Регистрация нового пользователя
       tags:
       - auth
+  /files/{filepath}:
+    get:
+      description: Проксирует файлы из MinIO (изображения, видео)
+      parameters:
+      - description: Путь к файлу в хранилище
+        in: path
+        name: filepath
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Файл
+          schema:
+            type: file
+        "404":
+          description: Файл не найден
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Получить файл из хранилища
+      tags:
+      - files
   /profile:
     get:
       description: Возвращает данные авторизованного пользователя
@@ -961,6 +1065,32 @@ paths:
       summary: Обновить профиль
       tags:
       - user
+  /robots.txt:
+    get:
+      description: Возвращает robots.txt с правилами индексации и ссылкой на sitemap
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: robots.txt
+          schema:
+            type: string
+      summary: Правила для поисковых роботов (robots.txt)
+      tags:
+      - seo
+  /sitemap.xml:
+    get:
+      description: Возвращает XML sitemap со списком индексируемых страниц
+      produces:
+      - text/xml
+      responses:
+        "200":
+          description: XML sitemap
+          schema:
+            type: string
+      summary: Карта сайта (sitemap.xml)
+      tags:
+      - seo
 securityDefinitions:
   CookieAuth:
     description: JWT токен в HttpOnly cookie

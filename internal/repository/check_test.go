@@ -103,7 +103,7 @@ func TestCheckRepo_GetChecksByUserID(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	checks, total, err := repo.GetChecksByUserID(user.ID, 10, 0)
+	checks, total, err := repo.GetChecksByUserID(user.ID, 10, 0, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(3), total)
@@ -127,7 +127,7 @@ func TestCheckRepo_GetChecksByUserID_Pagination(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	checks, total, err := repo.GetChecksByUserID(user.ID, 2, 0)
+	checks, total, err := repo.GetChecksByUserID(user.ID, 2, 0, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(5), total)
@@ -151,7 +151,7 @@ func TestCheckRepo_GetAllChecks(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	checks, total, err := repo.GetAllChecks(10, 0)
+	checks, total, err := repo.GetAllChecks(10, 0, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(3), total)

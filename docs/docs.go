@@ -375,6 +375,42 @@ const docTemplate = `{
                         "description": "Количество на странице",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Тип проверки (text, image, video, url, batch)",
+                        "name": "check_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Уровень опасности (low, medium, high, critical)",
+                        "name": "danger_level",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Статус (processing, completed, failed)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Поиск по названию и содержимому",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Дата от (RFC3339)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Дата до (RFC3339)",
+                        "name": "date_to",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -525,7 +561,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Возвращает список всех проверок текущего пользователя с пагинацией",
+                "description": "Возвращает список всех проверок текущего пользователя с пагинацией и фильтрацией",
                 "produces": [
                     "application/json"
                 ],
@@ -546,6 +582,42 @@ const docTemplate = `{
                         "default": 20,
                         "description": "Количество записей на странице",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Тип проверки (text, image, video, url, batch)",
+                        "name": "check_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Уровень опасности (low, medium, high, critical)",
+                        "name": "danger_level",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Статус (processing, completed, failed)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Поиск по названию и содержимому",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Дата от (RFC3339)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Дата до (RFC3339)",
+                        "name": "date_to",
                         "in": "query"
                     }
                 ],
@@ -881,6 +953,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/health/structured-data": {
+            "get": {
+                "description": "Возвращает JSON-LD разметку типа APIReference для health endpoint",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "seo"
+                ],
+                "summary": "Структурированные данные для API здоровья",
+                "responses": {
+                    "200": {
+                        "description": "JSON-LD for API health check",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/structured-data": {
+            "get": {
+                "description": "Возвращает JSON-LD разметку для веб-приложения по детекции мошенничества",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "seo"
+                ],
+                "summary": "Структурированные данные (JSON-LD)",
+                "responses": {
+                    "200": {
+                        "description": "JSON-LD structured data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Аутентификация пользователя и возврат JWT токенов в cookies",
@@ -1022,6 +1136,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/files/{filepath}": {
+            "get": {
+                "description": "Проксирует файлы из MinIO (изображения, видео)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Получить файл из хранилища",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Путь к файлу в хранилище",
+                        "name": "filepath",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Файл",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Файл не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/profile": {
             "get": {
                 "security": [
@@ -1115,6 +1270,46 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/robots.txt": {
+            "get": {
+                "description": "Возвращает robots.txt с правилами индексации и ссылкой на sitemap",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "seo"
+                ],
+                "summary": "Правила для поисковых роботов (robots.txt)",
+                "responses": {
+                    "200": {
+                        "description": "robots.txt",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/sitemap.xml": {
+            "get": {
+                "description": "Возвращает XML sitemap со списком индексируемых страниц",
+                "produces": [
+                    "text/xml"
+                ],
+                "tags": [
+                    "seo"
+                ],
+                "summary": "Карта сайта (sitemap.xml)",
+                "responses": {
+                    "200": {
+                        "description": "XML sitemap",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }

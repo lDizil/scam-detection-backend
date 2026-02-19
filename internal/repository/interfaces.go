@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+type CheckFilters struct {
+	CheckType   string // text, image, video, url, batch
+	DangerLevel string // low, medium, high, critical
+	Status      string // processing, completed, failed
+	Search      string // поиск по title и content
+	DateFrom    *time.Time
+	DateTo      *time.Time
+}
+
 type UserRepository interface {
 	Create(user *models.User) error
 	GetByID(id uint) (*models.User, error)
@@ -24,8 +33,8 @@ type UserRepository interface {
 type CheckRepository interface {
 	CreateCheck(check *models.Check) error
 	GetCheckByID(id uint) (*models.Check, error)
-	GetChecksByUserID(userID uint, limit, offset int) ([]models.Check, int64, error)
-	GetAllChecks(limit, offset int) ([]models.Check, int64, error)
+	GetChecksByUserID(userID uint, limit, offset int, filters *CheckFilters) ([]models.Check, int64, error)
+	GetAllChecks(limit, offset int, filters *CheckFilters) ([]models.Check, int64, error)
 	UpdateCheckStatus(id uint, status string, dangerScore float64, dangerLevel string, processingTime int) error
 	AddCheckDetail(detail *models.CheckDetail) error
 	GetCheckDetails(checkID uint) ([]models.CheckDetail, error)

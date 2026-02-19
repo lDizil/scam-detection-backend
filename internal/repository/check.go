@@ -26,16 +26,21 @@ func (r *checkRepository) GetCheckByID(id uint) (*models.Check, error) {
 	return &check, nil
 }
 
-func (r *checkRepository) GetChecksByUserID(userID uint, limit, offset int) ([]models.Check, int64, error) {
+func (r *checkRepository) GetChecksByUserID(userID uint, limit, offset int, filters *CheckFilters) ([]models.Check, int64, error) {
 	var checks []models.Check
 	var total int64
 
-	if err := r.db.Model(&models.Check{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+	query := r.db.Model(&models.Check{}).Where("user_id = ?", userID)
+	query = r.applyFilters(query, filters)
+
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err := r.db.Where("user_id = ?", userID).
-		Order("created_at DESC").
+	queryData := r.db.Where("user_id = ?", userID)
+	queryData = r.applyFilters(queryData, filters)
+
+	if err := queryData.Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
 		Find(&checks).Error; err != nil {
@@ -45,16 +50,21 @@ func (r *checkRepository) GetChecksByUserID(userID uint, limit, offset int) ([]m
 	return checks, total, nil
 }
 
-func (r *checkRepository) GetAllChecks(limit, offset int) ([]models.Check, int64, error) {
+func (r *checkRepository) GetAllChecks(limit, offset int, filters *CheckFilters) ([]models.Check, int64, error) {
 	var checks []models.Check
 	var total int64
 
-	if err := r.db.Model(&models.Check{}).Count(&total).Error; err != nil {
+	query := r.db.Model(&models.Check{})
+	query = r.applyFilters(query, filters)
+
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err := r.db.Preload("User").
-		Order("created_at DESC").
+	queryData := r.db.Preload("User")
+	queryData = r.applyFilters(queryData, filters)
+
+	if err := queryData.Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
 		Find(&checks).Error; err != nil {
@@ -62,6 +72,39 @@ func (r *checkRepository) GetAllChecks(limit, offset int) ([]models.Check, int64
 	}
 
 	return checks, total, nil
+}
+
+func (r *checkRepository) applyFilters(query *gorm.DB, filters *CheckFilters) *gorm.DB {
+	if filters == nil {
+		return query
+	}
+
+	if filters.CheckType != "" {
+		query = query.Where("check_type = ?", filters.CheckType)
+	}
+
+	if filters.DangerLevel != "" {
+		query = query.Where("danger_level = ?", filters.DangerLevel)
+	}
+
+	if filters.Status != "" {
+		query = query.Where("status = ?", filters.Status)
+	}
+
+	if filters.Search != "" {
+		searchPattern := "%" + filters.Search + "%"
+		query = query.Where("title ILIKE ? OR content ILIKE ?", searchPattern, searchPattern)
+	}
+
+	if filters.DateFrom != nil {
+		query = query.Where("created_at >= ?", filters.DateFrom)
+	}
+
+	if filters.DateTo != nil {
+		query = query.Where("created_at <= ?", filters.DateTo)
+	}
+
+	return query
 }
 
 func (r *checkRepository) UpdateCheckStatus(id uint, status string, dangerScore float64, dangerLevel string, processingTime int) error {
